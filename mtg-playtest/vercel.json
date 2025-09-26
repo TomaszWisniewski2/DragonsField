@@ -10,10 +10,10 @@
       }
     }
   ],
-  "routes": [ 
+  "rewrites": [ 
     {
-      "src": "/.*",          
-      "dest": "/index.html" 
+      "source": "/(.*)",          
+      "destination": "/mtg-playtest/dist/index.html" 
     }
   ],
   "installCommand": "npm install",
