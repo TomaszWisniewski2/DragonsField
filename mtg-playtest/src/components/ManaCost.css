@@ -1,0 +1,56 @@
+/* src/components/ManaCost.css */
+
+.mana-cost-container {
+  display: flex;
+  flex-wrap: wrap; /* Dodaj zawijanie elementów */
+  align-items: center;
+  gap: 1px; /* Zmniejszony odstęp między symbolami */
+}
+
+.mana-symbol2 {
+  width: 14px; /* Zmniejszony rozmiar kółka */
+  height: 14px; /* Zmniejszony rozmiar kółka */
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 8px; /* Zmniejszony rozmiar czcionki dla liter i cyfr */
+  font-weight: bold;
+  color: white;
+  background-color: #555; /* Domyślny kolor dla many bezbarwnej lub innych symboli */
+
+  /* Dodano te style dla emotikonów */
+  line-height: 1; 
+  /* Poprawione stylowanie, aby symbole nie były za blisko siebie */
+  margin: 1px;
+}
+
+/* Styl dla generycznej many (np. {2}, {3}) */
+.mana-generic {
+  background-color: #555;
+  color: white;
+  font-size: 10px; /* Nieco większa czcionka dla liczb, aby były czytelne */
+}
+
+
+/* Kolory dla konkretnych symboli */
+.mana-u {
+  background-color: #2355b2;
+}
+
+.mana-b {
+  background-color: #0d0d0d;
+}
+
+.mana-g {
+  background-color: #288f34;
+}
+
+.mana-r {
+  background-color: #a32223;
+}
+
+.mana-w {
+  background-color: #c4c4c4;
+  color: black;
+}

@@ -1,0 +1,91 @@
+/* src/components/ManaPanel.css */
+
+.mana-panel-container {
+    position: absolute;
+    bottom: 200px;
+    left: 149px;
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    margin: 10px 0;
+    color: white;
+}
+
+.mana-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Zmieniamy .mana na Flexbox, aby poprawnie centrować zawartość */
+.mana {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 35px; /* Zwiększono szerokość, aby zmieściły się dwucyfrowe liczby */
+    height: 45px;
+    background-size: cover;
+    background-repeat: no-repeat;
+    font-weight: bold;
+    color: white; /* Zmieniono na biały, aby pasował do tła */
+    font-size: 1em;
+    cursor: pointer;
+    border: none;
+}
+
+/* Indywidualne kolory tła dla kółek many */
+.mana-w {
+    background-color: #d8cd31;
+}
+.mana-u {
+    background-color: #265fd9;
+}
+.mana-b {
+    background-color: #5e0a68;
+}
+.mana-r {
+    background-color: #c81c02;
+}
+.mana-g {
+    background-color: #38b928;
+}
+.mana-c {
+    background-color: #898888;
+}
+
+.mana-value {
+    font-size: 1.2em;
+    font-weight: bold;
+    margin: 0; /* Usunięto margin-bottom, aby nie kolidował z Flexboxem */
+    text-align: center;
+    color: white;
+}
+
+.mana-button {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    width: 14px;
+    height: 14px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.2em;
+    cursor: pointer;
+    margin: 6px 0;
+}
+
+.mana-button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Nowa klasa dla symboli emoji */
+.mana-symbol {
+    /* Używamy flexboxa do centrowania, nie potrzebujemy już pozycjonowania absolutnego */
+    font-size: 1.0em;
+    color: white;
+}

@@ -1,0 +1,117 @@
+/* src/pages/PlaytestComponents/LibraryViewer.css */
+
+/* Kontener dla całego panelu */
+.library-viewer-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 300px;
+  height: 98vh;
+  background-color: #2c2c2c;
+  box-shadow: -4px 0 10px var(--player-color);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+}
+
+
+.library-viewer-container {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  height: 97%;
+}
+
+/* Nagłówek panelu */
+.library-viewer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #fff;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #444;
+}
+
+.library-viewer-header button {
+  background-color: #555;
+  color: #fff;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+/* Główne okno treści, zawierające podgląd i listę kart */
+.library-viewer-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Obszar obrazka - stały, nieprzewijalny obszar */
+.card-image-preview {
+  width: 100%;
+  padding-bottom: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 250px;
+  flex-shrink: 0;
+}
+
+.card-image-preview img {
+  width: 90%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 5px;
+}
+
+/* Lista kart - przewijalna */
+.card-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  color: #fff;
+  width: 100%;
+  flex-grow: 1;
+  overflow-y: auto;
+}
+
+.card-list li {
+  padding: 8px 0;
+  border-bottom: 1px solid #444;
+  cursor: pointer;
+}
+
+/* Nowy styl dla pola filtrowania */
+.library-viewer-filter {
+  padding-top: 10px;
+  border-top: 1px solid #444;
+}
+
+.library-viewer-filter input {
+  width: 100%;
+  padding: 8px;
+  background-color: #444;
+  color: #fff;
+  border: 1px solid #555;
+  border-radius: 4px;
+  box-sizing: border-box; /* Upewnia się, że padding i border są wliczone w szerokość */
+}
+
+/* Dodaj styl dla focusu, aby było widać, że pole jest aktywne */
+.library-viewer-filter input:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+.drag-image-placeholder {
+    position: absolute;
+    top: -1000px;
+    left: -1000px;
+    width: 100px; /* Ustawienie docelowej szerokości */
+    height: 139px; /* Ustawienie docelowej wysokości */
+    pointer-events: none; /* Zapobiega interakcji */
+    object-fit: contain; /* Utrzymuje proporcje */
+}

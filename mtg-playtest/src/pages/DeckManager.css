@@ -1,0 +1,19 @@
+.deck-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 15px;
+  padding: 10px;
+  border-radius: 8px;
+  background-color: #333;
+  min-height: 200px; /* Minimalna wysokość, aby pojawił się scrollbar */
+  max-height: 400px; /* Maksymalna wysokość, po której następuje przewijanie */
+  overflow-y: scroll; /* Włącza przewijanie wertykalne */
+  height: 40vh;
+}
+
+.deck-list > div {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+

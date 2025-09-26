@@ -1,0 +1,198 @@
+/* src/pages/PlaytestComponents/Navbar.css */
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 98%;
+  padding: 10px 20px;
+  background-color: #333;
+  color: #fff;
+  font-size: 16px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 50;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.left-section,
+.center-section,
+.right-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.right-section {
+    flex-wrap: wrap; /* Pozwala na zawijanie elementów */
+    justify-content: flex-end; /* Wyrównuje elementy do prawej */
+}
+
+.nav-button {
+  background-color: #555;
+  color: #fff;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.nav-text {
+  font-weight: bold;
+}
+
+.other-player-info {
+  display: flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.other-player-info:hover {
+  
+  background-color: #444;
+  
+}
+
+.other-player-info.active-player-info {
+  border-color: #007bff;
+}
+
+/* ... (istniejące style) ... */
+
+/* Zmodyfikowane style dla aktywnej tury */
+.nav-text.player-name.active-turn {
+  font-weight: bold;
+  /* Podkreślenie jest teraz kolorem tła */
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+}
+
+/* Nadaj kolory podkreśleniu, używając `!important` dla pewności */
+.color-player-1.active-turn {
+  text-decoration-color: var(--player-color) !important;
+}
+
+.color-player-2.active-turn {
+  text-decoration-color: var(--player-color) !important;
+}
+
+.color-player-3.active-turn {
+  text-decoration-color: var(--player-color) !important;
+}
+
+.color-player-4.active-turn {
+  text-decoration-color: var(--player-color) !important;
+}
+
+
+/* Nowe style dla panelu liczników */
+.relative {
+  position: relative;
+  display: inline-block;
+}
+
+.counters-panel-container {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  min-width: 110px;
+  background-color: rgb(26, 25, 25);
+  /* Zmieniamy kolor ramki na zmienną gracza */
+  border: 1px solid var(--player-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 10px;
+}
+
+.counters-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.counters-panel-header h6 {
+  margin: 0;
+}
+
+.counters-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.counter-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid var(--player-color);
+  
+}
+
+.counter-label {
+  width: 120px;
+  display: flex;
+  align-items: center;
+}
+
+.counter-value {
+  flex-grow: 1;
+  text-align: right;
+  font-family: monospace;
+}
+
+.counter-buttons {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+
+.counter-buttons button {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background-color: #585151;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  color: #fff;
+  
+}
+
+.counter-buttons button:hover {
+  background-color: #464444;
+}
+
+
+.dropdown-triangle {
+  position: relative; /* Potrzebne dla pozycjonowania pseudoelementu */
+  padding-right: 15px; /* Dodatkowe miejsce dla trójkąta */
+}
+
+.dropdown-triangle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -5px;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 7px solid var(--player-color); /* Zmieniono z 'white' na zmienną CSS */
+}
+
+
+.dropdown-triangle:hover::after {
+  border-top-color: white; /* Ustawiamy kolor trójkąta na biały po najechaniu */
+}

@@ -1,0 +1,57 @@
+.card-container {
+    position: relative; /* Dodaj position: relative, aby pozycjonowanie absolutne działało */
+    width: 100px;
+    text-align: center;
+    border: 1px solid #000;
+    transition: border 0.2s, transform 0.2s;
+    display: inline-block;
+}
+
+.card-container:hover {
+    /* Użyj outline zamiast border, aby uniknąć zmiany rozmiaru /
+    border: 1px solid transparent; / Utrzymaj tę samą szerokość ramki /
+    outline: 1.5px solid var(--player-color); / Dodaj ramkę outline /
+    outline-offset: -1px; / Upewnij się, że outline nie dodaje dodatkowego rozmiaru */
+    transform: scale(1.05);
+    transform-origin: center center;
+}
+
+.card-placeholder {
+    border: 1px solid black;
+    height: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #333;
+    color: #fff;
+}
+
+.card-image {
+  width: 100%;
+  display: block;
+}
+
+.mana-indicator {
+    position: absolute;
+    top: 0px;
+    right: -2px;
+    z-index: 10;
+    padding: 0px;
+    border-radius: 0px;
+    opacity: 0; /* Ukryj element domyślnie /
+    visibility: hidden; / Upewnij się, że nie zajmuje miejsca i nie jest interaktywny /
+    transition: opacity 0.2s, visibility 0.2s; / Dodaj płynne przejście */
+}
+
+.card-stats-indicator {
+    position: absolute;
+    bottom: 0px;
+    right: 0px;
+    z-index: 10;
+    padding: 0px;
+}
+
+.card-container:hover .mana-indicator {
+    opacity: 1; /* Ujawnij element /
+    visibility: visible; / Ustaw jako widoczny */
+}

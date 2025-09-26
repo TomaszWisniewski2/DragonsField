@@ -1,0 +1,17 @@
+.card-preview-container {
+  position: fixed;
+  top: 320px; /* Dostosuj pozycję pionową, żeby była nad Bottombar */
+  right: 15px; /* Dostosuj pozycję poziomą */
+  z-index: 2000; /* Upewnij się, że jest nad wszystkimi innymi elementami */
+  pointer-events: none; /* Pozwól na klikanie pod spodem */
+  transition: opacity 0.2s ease-in-out;
+  opacity: 1;
+}
+
+.card-preview-image {
+  width: 280px; /* Zwiększ rozmiar karty */
+  height: auto;
+  border: 4px solid #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}

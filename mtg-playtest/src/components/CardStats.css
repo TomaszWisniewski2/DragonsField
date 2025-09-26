@@ -1,0 +1,35 @@
+.card-stats {
+    background-color: rgba(0, 0, 0, 0.847); /* Czarne tło z przezroczystością */
+    color: white;
+    padding: 1px 4px;
+    border-radius: 4px;
+    font-size: 15px;
+    font-weight: bold;
+    display: inline-block;
+    transition: border 0.2s;
+}
+
+.card-stats:hover {
+    border: 1.5px solid var(--player-color);
+    cursor: pointer;
+}
+
+.player-one {
+    --player-color: #8B0000; /* Czerwony */
+}
+
+.player-two {
+    --player-color: #00008B; /* Granatowy */
+}
+
+.power-toughness {
+    white-space: nowrap; /* Zapobiega łamaniu się tekstu */
+}
+
+.card-stats-indicator {
+    position: absolute;
+    bottom: 2px; /* Przesuwa panel 5px w górę od dolnej krawędzi /
+    right: 5px;  / Przesuwa panel 5px w lewo od prawej krawędzi */
+    z-index: 10;
+    padding: 0px;
+}

@@ -1,0 +1,81 @@
+/* src/components/StartGameModal.css */
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(51, 51, 51, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000; /* Upewnij się, że jest na wierzchu */
+}
+
+.modal-content {
+  background-color: #333;
+  color: white;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+  position: relative;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  min-width: 300px;
+   margin-top: -700px;
+}
+
+.modal-close-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  color: #bbb;
+  font-size: 24px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.modal-close-button:hover {
+  color: white;
+}
+
+.modal-body p {
+  font-size: 1.2em;
+  margin: 20px 0;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: center;
+  gap: 150px;
+}
+
+.modal-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1em;
+  font-weight: bold;
+  transition: background-color 0.2s ease;
+}
+
+.modal-button-confirm {
+  background-color: #4CAF50; /* Zielony dla 'Tak' */
+  color: white;
+}
+
+.modal-button-confirm:hover {
+  background-color: #45a049;
+}
+
+.modal-button-cancel {
+  background-color: #f44336; /* Czerwony dla 'Nie' */
+  color: white;
+}
+
+.modal-button-cancel:hover {
+  background-color: #d32f2f;
+}
