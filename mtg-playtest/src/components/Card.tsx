@@ -1,4 +1,3 @@
-import React from 'react';
 import type { CardType, CardOnField } from "./types";
 import "./Card.css";
 import ManaCost from './ManaCost';

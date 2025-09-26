@@ -1,4 +1,3 @@
-import React from "react";
 import type{ Player } from "../../components/types";
 import "./../Playtest.css";
 
@@ -32,10 +31,6 @@ export default function Sidebar({
   player,
   nextTurn,
   toggleLibraryViewer,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  toggleGraveyardViewer,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  toggleExileViewer,
 }: SidebarProps) {
   return (
     <div className="sidebar">

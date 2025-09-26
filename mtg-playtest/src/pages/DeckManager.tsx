@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { getCardByName, getCardImageUrl } from "../api/scryfall";
 import "./DeckManager.css";
 import type { CardType } from "../components/types";

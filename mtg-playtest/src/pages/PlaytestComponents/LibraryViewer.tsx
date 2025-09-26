@@ -1,6 +1,6 @@
 // src/pages/PlaytestComponents/LibraryViewer.tsx
 
-import React, { useState, useRef } from "react"; // Dodano useRef
+import { useState, useRef } from "react"; // Dodano useRef
 import type { Player } from "../../components/types";
 import "./LibraryViewer.css";
 

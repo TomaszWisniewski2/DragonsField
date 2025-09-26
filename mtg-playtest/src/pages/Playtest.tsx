@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useSocket } from "../hooks/useSocket";
 import "./Playtest.css";
 import Navbar from "./PlaytestComponents/Navbar";
