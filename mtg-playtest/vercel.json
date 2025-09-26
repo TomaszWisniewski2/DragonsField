@@ -1,22 +1,11 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "mtg-playtest/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "installCommand": "npm install",
-        "buildCommand": "npm run build"
-      }
-    }
-  ],
+  "installCommand": "npm install",
+  "buildCommand": "npm run build --prefix mtg-playtest",
+  "outputDirectory": "mtg-playtest/dist",
   "routes": [
     {
       "src": "/.*",
-      "dest": "mtg-playtest/dist/index.html"
+      "dest": "/index.html"  
     }
-  ],
-  "installCommand": "npm install",
-  "buildCommand": "npm run build --prefix mtg-playtest",
-  "outputDirectory": "mtg-playtest/dist"
+  ]
 }
