@@ -13,7 +13,7 @@
   "routes": [
     {
       "src": "/.*",
-      "dest": "mtg-playtest/dist/index.html"
+      "dest": "/index.html"
     }
   ],
   "installCommand": "npm install",
