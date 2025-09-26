@@ -32,7 +32,7 @@ export default function Playtest() {
     changeMana,
     changeCounters,
     incrementCardStats,
-  } = useSocket("https://dragonsfieldserver-production.up.railway.app/");
+  } = useSocket(import.meta.env.VITE_SERVER_URL || "http://localhost:3001");
 
   const [sessionCode, setSessionCode] = useState("");
   const [playerName, setPlayerName] = useState("");
