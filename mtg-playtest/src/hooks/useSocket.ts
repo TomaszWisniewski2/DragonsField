@@ -4,6 +4,10 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import io, { Socket } from "socket.io-client";
 import type { Player, Session, CardType, CardOnField, Zone, SessionType } from "../components/types";
 
+
+export interface SessionStats {
+ [code: string]: number; // Klucz to kod sesji, wartość to liczba graczy
+}
 // Eksportujemy typy, aby były dostępne dla innych komponentów
 export type { Player, Session, CardType, CardOnField, Zone, SessionType };
 
@@ -11,6 +15,7 @@ export const useSocket = (serverUrl: string) => {
     const [connected, setConnected] = useState(false);
     const [session, setSession] = useState<Session | null>(null);
     const [playerId, setPlayerId] = useState<string | null>(null);
+    const [allSessionStats, setAllSessionStats] = useState<SessionStats>({});
     const socketRef = useRef<Socket | null>(null);
 
     useEffect(() => {
@@ -37,6 +42,12 @@ export const useSocket = (serverUrl: string) => {
         socket.on("updateState", (updatedSession: Session) => {
             setSession(updatedSession);
             console.log("Otrzymano aktualizację stanu sesji");
+        });
+
+         // NOWE NASŁUCHIWANIE NA STATYSTYKI
+        socket.on("updateSessionStats", (stats: SessionStats) => {
+            setAllSessionStats(stats);
+            console.log("Otrzymano aktualne statystyki sesji:", stats);
         });
 
         socket.on("error", (message: string) => {
@@ -125,6 +136,7 @@ export const useSocket = (serverUrl: string) => {
         nextTurn,
         changeMana,
         changeCounters,
-        incrementCardStats
+        incrementCardStats,
+        allSessionStats,
     };
 };

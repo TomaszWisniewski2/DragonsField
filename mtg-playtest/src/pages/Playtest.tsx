@@ -1,5 +1,7 @@
+// Playtest.tsx
 import { useState, useCallback, useEffect } from "react";
-import { useSocket } from "../hooks/useSocket";
+// Importujemy useSocket, SessionStats i SessionType z useSocket
+import { useSocket,type SessionType } from "../hooks/useSocket";
 import "./Playtest.css";
 import Navbar from "./PlaytestComponents/Navbar";
 import Battlefield from "./PlaytestComponents/Battlefield";
@@ -9,17 +11,18 @@ import LibraryViewer from "./PlaytestComponents/LibraryViewer";
 import GraveyardViewer from "./PlaytestComponents/GraveyardViewer";
 import ExileViewer from "./PlaytestComponents/ExileViewer";
 import ManaPanel from "../components/ManaPanel";
-import type { CardType, Player, SessionType } from "../components/types";
+import type { CardType, Player } from "../components/types"; // Typy CardType i Player pochodzą stąd
 import StartGameModal from "../components/StartGameModal";
 import CardPreview from "../components/CardPreview";
-import { Link } from "react-router-dom"; // <= DODAJ TEN IMPORT
+import { Link } from "react-router-dom"; 
+
+// Usunięto lokalną definicję SessionStats
 
 export default function Playtest() {
   const {
     connected,
     session,
     playerId,
-    createSession,
     joinSession,
     startGame,
     draw,
@@ -32,11 +35,11 @@ export default function Playtest() {
     changeMana,
     changeCounters,
     incrementCardStats,
+    // Dodano allSessionStats z useSocket
+    allSessionStats, 
   } = useSocket(import.meta.env.VITE_SERVER_URL || "http://localhost:3001");
 
-  const [sessionCode, setSessionCode] = useState("");
   const [playerName, setPlayerName] = useState("");
-  const [sessionType, setSessionType] = useState<SessionType>("standard"); // NOWY STAN
   const [zoom, setZoom] = useState(100);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [viewedPlayerId, setViewedPlayerId] = useState<string | null>(null);
@@ -45,6 +48,9 @@ export default function Playtest() {
   const [isGraveyardViewerOpen, setIsGraveyardViewerOpen] = useState(false);
   const [isExileViewerOpen, setIsExileViewerOpen] = useState(false);
   const [isManaPanelVisible, setIsManaPanelVisible] = useState(false);
+  
+  // Usunięto lokalny stan sessionStats
+  
   const player = session?.players.find((p) => p.id === playerId);
   const otherPlayers = session?.players.filter((p) => p.id !== playerId) || [];
   const viewedPlayer = session?.players.find(p => p.id === viewedPlayerId) || player;
@@ -53,43 +59,39 @@ export default function Playtest() {
 
   const [hoveredCard, setHoveredCard] = useState<CardType | null>(null);
   const [hoverTimer, setHoverTimer] = useState<NodeJS.Timeout | null>(null);
+
+  // === STAŁA LISTA SESJI ===
+  const FIXED_SESSIONS: { code: string; name: string; type: SessionType }[] = [
+    { code: "STND1", name: "Standard 1 (20 HP)", type: "standard" },
+    { code: "STND2", name: "Standard 2 (20 HP)", type: "standard" },
+    { code: "CMDR1", name: "Commander 1 (40 HP)", type: "commander" },
+    { code: "CMDR2", name: "Commander 2 (40 HP)", type: "commander" },
+  ];
+  // =========================
   
   const getPlayerColorClass = useCallback((pId: string) => `color-player-${(session?.players.findIndex(p => p.id === pId) ?? 0) + 1}`, [session]);
 
-  const handleCreateSession = () => {
+  const handleJoinSession = (code: string, sessionType: SessionType) => {
     const savedDeck = localStorage.getItem("currentDeck");
     const deck: CardType[] = savedDeck ? JSON.parse(savedDeck) : [];
-    if (!sessionCode || !playerName) {
-      alert("Kod sesji i nazwa gracza nie mogą być puste.");
+    
+    if (!playerName) {
+      alert("Nazwa gracza nie może być pusta.");
       return;
     }
-    if (sessionType === "commander" && deck.length === 0) {
-      alert("W trybie Commander talia musi zawierać kartę dowódcy.");
-      return;
-    }
+    
     if (deck.length === 0) {
       alert("Talia jest pusta! Zbuduj talię w Deck Managerze.");
       return;
     }
-    createSession(sessionCode, playerName, deck, sessionType);
-  };
-
-  const handleJoinSession = () => {
-    const savedDeck = localStorage.getItem("currentDeck");
-    const deck: CardType[] = savedDeck ? JSON.parse(savedDeck) : [];
-    if (!sessionCode || !playerName) {
-      alert("Kod sesji i nazwa gracza nie mogą być puste.");
-      return;
-    }
+    
+    // Zmieniona logika, aby była kompatybilna z nowym useSocket, gdzie typ jest wymagany
     if (sessionType === "commander" && deck.length === 0) {
       alert("W trybie Commander talia musi zawierać kartę dowódcy.");
       return;
     }
-    if (deck.length === 0) {
-      alert("Talia jest pusta! Zbuduj talię w Deck Managerze.");
-      return;
-    }
-    joinSession(sessionCode, playerName, deck, sessionType);
+    
+    joinSession(code, playerName, deck, sessionType);
   };
   
   const handleShuffle = () => {
@@ -159,7 +161,6 @@ export default function Playtest() {
 
   const handleConfirmStartGame = () => {
     if (session) {
-      // Przekazujemy typ sesji podczas restartu/startu gry
       startGame(session.code, session.sessionType);
       handleCloseStartGameModal();
     }
@@ -185,69 +186,98 @@ export default function Playtest() {
     }
   }, [hoverTimer]);
 
-  console.log('Connected:', connected, 'Session:', session, 'Player:', player);
-
+  // Usunięto symulacyjny useEffect
+  
   if (!connected || !session || !player) {
   return (
-   <div className="login-container">
+    <div className="login-container">
 
-          {/* === NOWA SEKCJA NAWIGACJI DLA LOGIN-CONTAINER === */}
-          <nav style={{ marginBottom: "1rem" }}>
-              <Link to="/" className="nav-button" style={{ marginRight: "1rem" }}>Home</Link>
-              <Link to="/playtest" className="nav-button" style={{ marginRight: "1rem" }}>Playtest</Link>
-              <Link to="/decks" className="nav-button">Deck Manager</Link>
-          </nav>
-          {/* ================================================= */}
-        <h1>MTG Playtest</h1>
-        <p>Wprowadź kod sesji i swoje imię, aby rozpocząć.</p>
-        <div className="input-group">
-          <input
-            type="text"
-            placeholder="Kod sesji"
-            value={sessionCode}
-            onChange={(e) => setSessionCode(e.target.value)}
-          />
-          <input
-            type="text"
-            placeholder="Twoje imię"
-            value={playerName}
-            onChange={(e) => setPlayerName(e.target.value)}
-          />
-        </div>
-        <div className="mode-select">
-          <label>
-            <input 
-              type="radio" 
-              value="standard" 
-              checked={sessionType === "standard"}
-              onChange={() => setSessionType("standard")}
-            />
-            Tryb Standard
-          </label>
-          <label>
-            <input 
-              type="radio" 
-              value="commander" 
-              checked={sessionType === "commander"}
-              onChange={() => setSessionType("commander")}
-            />
-            Tryb Commander
-          </label>
-        </div>
-        <div className="button-group">
-          <button onClick={handleCreateSession}>Stwórz sesję</button>
-          <button onClick={handleJoinSession}>Dołącz do sesji</button>
-        </div>
-        {!connected && (
-          <p className="status-text disconnected">Łączenie z serwerem...</p>
-        )}
-        {connected && (
-          <p className="status-text">Połączono z serwerem. Oczekuje na akcję.</p>
-        )}
+      {/* SEKCJA NAWIGACJI */}
+      <nav style={{ marginBottom: "1rem" }}>
+        <Link to="/" className="nav-button" style={{ marginRight: "1rem" }}>Home</Link>
+        <Link to="/playtest" className="nav-button" style={{ marginRight: "1rem" }}>Playtest</Link>
+        <Link to="/decks" className="nav-button">Deck Manager</Link>
+      </nav>
+      
+      <h1>MTG Playtest</h1>
+      <p>Wprowadź swoje imię i dołącz do jednej ze stałych sesji.</p>
+      
+      <div className="input-group">
+        <input
+          type="text"
+          placeholder="Twoje imię"
+          value={playerName}
+          onChange={(e) => setPlayerName(e.target.value)}
+        />
       </div>
+
+      {/* ZMIENIONA LISTA STAŁYCH SESJI Z NOWYMI KOLORAMI I LICZNIKIEM GRACZY */}
+      <div className="fixed-sessions-list" style={{ marginTop: "1rem", width: '100%', maxWidth: '400px' }}>
+        <h2>Dostępne sesje:</h2>
+        {FIXED_SESSIONS.map((s) => {
+          // Ustawienie koloru w zależności od typu
+          const color = s.type === 'commander' ? 'darkorange' : 'darkgreen'; 
+          // Używamy allSessionStats pobranego z useSocket
+          const playersCount = allSessionStats[s.code] || 0; 
+
+          return (
+            <div 
+              key={s.code} 
+              className="session-item" 
+              style={{ 
+                margin: '0.5rem 0', 
+                padding: '0.7rem', 
+                border: `2px solid ${color}`, 
+                borderRadius: '4px', 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                backgroundColor: color, 
+                color: 'white', 
+                textShadow: '1px 1px 2px black'
+              }}
+            >
+              <div>
+                <strong>{s.code}</strong>
+                <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>{s.name}</div>
+                {/* WYŚWIETLANIE LICZBY GRACZY */}
+                <div style={{ fontSize: '0.8rem', marginTop: '5px' }}>
+                  Gracze: {playersCount}/4
+                </div>
+              </div>
+              <button 
+                onClick={() => handleJoinSession(s.code, s.type)}
+                disabled={!connected || !playerName}
+                style={{ 
+                  marginLeft: '1rem', 
+                  padding: '0.5rem 1rem',
+                  backgroundColor: 'white',
+                  color: color,
+                  fontWeight: 'bold',
+                  borderRadius: '4px',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                Dołącz
+              </button>
+            </div>
+          );
+        })}
+      </div>
+      {/* =================================================================== */}
+      
+      {!connected && (
+        <p className="status-text disconnected">Łączenie z serwerem...</p>
+      )}
+      {connected && (
+        <p className="status-text">Połączono z serwerem. Wybierz sesję, aby dołączyć.</p>
+      )}
+    </div>
     );
   }
 
+  // ==== WIDOK POŁĄCZONEGO UŻYTKOWNIKA ====
   return (
     <div className="playtest-container">
       <Navbar
@@ -276,7 +306,7 @@ export default function Playtest() {
         shuffleMessage={shuffleMessage}
         setSelectedCards={setSelectedCards}
         selectedCards={selectedCards}
-        playerColorClass={viewedPlayerId ? getPlayerColorClass(viewedPlayerId) : ''}
+        playerColorClass={viewedPlayerId ? getPlayerColorClass(viewedPlayerId) : getPlayerColorClass(playerId!)}
         handleCardHover={handleCardHover}
         incrementCardStats={incrementCardStats} 
       />
