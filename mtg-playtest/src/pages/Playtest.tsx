@@ -346,6 +346,9 @@ export default function Playtest() {
         moveCard={moveCard}
         clearSelectedCards={clearSelectedCards}
         handleCardHover={handleCardHover}
+        toggleLibraryViewer={toggleLibraryViewer}
+        toggleGraveyardViewer={toggleGraveyardViewer}
+        toggleExileViewer={toggleExileViewer}
       />
 
         {isLibraryViewerOpen && (

@@ -49,3 +49,8 @@ export interface Session {
     activePlayer: string;
     sessionType: SessionType;
 }
+
+export interface PanelProps {
+    onClose: () => void;
+    panelRef: React.RefObject<HTMLDivElement | null>;
+}

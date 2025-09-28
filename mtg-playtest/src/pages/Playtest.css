@@ -383,3 +383,8 @@
 .zone-actions-panel .action-button:hover {
     background-color: rgba(255, 255, 255, 0.1);
 }
+
+/* Styl kontenera, który zawiera WSZYSTKIE karty w ręce (np. ten z napisem "Hand (8)") */
+.hand-container {
+    overflow: visible !important; /* To jest kluczowe */
+}

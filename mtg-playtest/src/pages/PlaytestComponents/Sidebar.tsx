@@ -31,6 +31,8 @@ export default function Sidebar({
   player,
   nextTurn,
   toggleLibraryViewer,
+  toggleGraveyardViewer,
+  toggleExileViewer,
 }: SidebarProps) {
   return (
     <div className="sidebar">
@@ -49,12 +51,12 @@ export default function Sidebar({
         <button className="sidebar-button" onClick={toggleLibraryViewer}>
           View Library
         </button>
-        {/* <button className="sidebar-button" onClick={toggleGraveyardViewer}>
+        <button className="sidebar-button" onClick={toggleGraveyardViewer}>
         View Graveyard
       </button>
       <button className="sidebar-button" onClick={toggleExileViewer}>
         View Exile
-      </button> */}
+      </button>
       <button className="sidebar-button" onClick={() => shuffle(sessionCode, player.id)}>
         Shuffle
       </button>

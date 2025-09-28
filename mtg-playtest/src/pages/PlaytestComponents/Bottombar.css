@@ -122,3 +122,56 @@
     transform: translateX(0);
     transition: transform 0.3s ease-out; 
 }
+
+.hand-container {
+    overflow: visible !important; /* To jest kluczowe */
+}
+
+.card-panel-override {
+    /* Nadpisujemy statyczne style, upewniając się, że inline 'top' i 'left' działają */
+
+    
+    /* DODAJEMY DODATKOWY NEGATYWNY MARGINES */
+    /* To podnosi cały element o stałą wartość (np. 10px) w górę, niezależnie od transformacji. */
+    margin-bottom: -240px; 
+    margin-left: 47px;
+    /* LUB, jeśli potrzebujesz większego przesunięcia, użyj ujemnego marginesu górnego: */
+    /* margin-top: -10px; */
+}
+
+.card-panel-override2 {
+    bottom: auto !important; 
+}
+
+.hand-panel-options-list {
+    display: flex;
+    flex-direction: column; 
+    gap: 2px; 
+    padding: 8px 0; 
+    background-color: #2c2c2c;
+    border-radius: 6px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
+    
+    /* --- NOWE WŁAŚCIWOŚCI DLA PRZEWIJANIA --- */
+    /* Ustaw maksymalną wysokość, np. 300px (dostosuj do swoich potrzeb) */
+    max-height: 219px; 
+    /* Włącz przewijanie pionowe, gdy zawartość przekroczy max-height */
+    overflow-y: auto; 
+    /* Ustaw styl paska przewijania (opcjonalnie, dla lepszej estetyki w niektórych przeglądarkach) */
+    scrollbar-width: thin;
+    scrollbar-color: #555 #2c2c2c;
+}
+
+/* Opcjonalnie: Stylizacja dla przeglądarek WebKit (Chrome/Safari) */
+.hand-panel-options-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.hand-panel-options-list::-webkit-scrollbar-thumb {
+    background-color: #555;
+    border-radius: 10px;
+}
+
+.hand-panel-options-list::-webkit-scrollbar-track {
+    background: #2c2c2c;
+}

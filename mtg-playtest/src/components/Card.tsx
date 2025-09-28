@@ -12,6 +12,8 @@ interface CardProps {
     cardOnField?: CardOnField;
 }
 
+
+
 export default function Card({
     card,
     from,

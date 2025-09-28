@@ -3,7 +3,19 @@
 import React, { type DragEvent, useState, useEffect, type MouseEvent, useRef } from "react";
 import type { Player, CardOnField, Zone, CardType } from "../../components/types";
 import Card from "../../components/Card";
-import "./../Playtest.css";
+import "./../Playtest.css"; 
+
+// --- 1. IMPORTUJ NOWY KOMPONENT I INTERFEJS ---
+import { 
+    BattlefieldCardPanel, 
+// Zmieniona nazwa
+} from "./panels/BattlefieldCardPanel"; // Dostosuj ścieżkę
+// --- KOMPONENT CARDPANEL DLA POLA BITWY ---
+
+
+
+
+// --- GŁÓWNY KOMPONENT BATTLEFIELD ---
 
 interface BattlefieldProps {
     viewedPlayer: Player | null | undefined;
@@ -29,7 +41,7 @@ interface BattlefieldProps {
     selectedCards: CardType[];
     playerColorClass: string;
     handleCardHover: (card: CardType | null) => void;
-    incrementCardStats: (code: string, playerId: string, cardId: string) => void; // Nowa prop
+    incrementCardStats: (code: string, playerId: string, cardId: string) => void; 
 }
 
 export default function Battlefield({
@@ -59,6 +71,97 @@ export default function Battlefield({
     const [isDraggingGroup, setIsDraggingGroup] = useState(false);
     const [draggedCards, setDraggedCards] = useState<CardOnField[]>([]);
 
+    // --- STANY DLA CARDPANEL NA POLU BITWY ---
+  const [isCardPanelOpen, setIsCardPanelOpen] = useState(false);
+  const [selectedCardForPanel, setSelectedCardForPanel] = useState<CardType | null>(null);
+  const [panelPosition, setPanelPosition] = useState<{ x: number, y: number } | null>(null);
+  const [panelDirection, setPanelDirection] = useState<'up' | 'down'>('up'); 
+  const cardPanelRef = useRef<HTMLDivElement>(null);
+
+    // ------------------------------------------
+
+    const closeCardPanel = () => {
+        setIsCardPanelOpen(false);
+        setSelectedCardForPanel(null);
+        setPanelPosition(null);
+        setPanelDirection('up');
+    }
+
+    const handleCardContextMenu = (e: MouseEvent<HTMLDivElement>, cardOnField: CardOnField) => {
+        e.preventDefault(); 
+        e.stopPropagation();
+
+        if (viewedPlayerId !== null) return;
+        
+        if (isCardPanelOpen && selectedCardForPanel?.id === cardOnField.card.id) {
+            closeCardPanel();
+        } else {
+            setIsSelecting(false);
+            setSelectionRect(null);
+
+            const rect = e.currentTarget.getBoundingClientRect();
+            const viewportHeight = window.innerHeight;
+            const middlePoint = viewportHeight / 2;
+            
+            // Stały odstęp od krawędzi karty
+            const OFFSET = 10; 
+
+            let finalY: number;
+            let direction: 'up' | 'down';
+
+            // Logika określania kierunku otwierania panelu
+            if (rect.bottom < middlePoint) {
+                // Karta jest w GÓRNEJ połowie ekranu -> Panel otwiera się W DÓŁ
+                // Punkt Y to dolna krawędź karty + OFFSET. 
+                // Panel będzie miał transform: translate(-50%, 0) (KROK 1)
+                direction = 'down';
+                finalY = rect.bottom + OFFSET; 
+            } else {
+                // Karta jest w DOLNEJ połowie ekranu -> Panel otwiera się W GÓRĘ
+                // Punkt Y to górna krawędź karty - OFFSET.
+                // Panel będzie miał transform: translate(-50%, -100%) (KROK 2)
+                direction = 'up';
+                finalY = rect.top - OFFSET; 
+            }
+
+            setPanelPosition({ 
+                x: rect.left + rect.width / 2, // Zawsze centrujemy w poziomie
+                y: finalY 
+            });
+            setPanelDirection(direction); 
+            setSelectedCardForPanel(cardOnField.card);
+            setIsCardPanelOpen(true);
+        }
+    };
+    
+    // --- FUNKCJE AKCJI DLA PANELU (bez zmian) ---
+    
+    const handleRotationAction = (cardId: string) => {
+        if (player && player.id === viewedPlayer?.id) {
+            rotateCard(sessionCode, player.id, cardId);
+        }
+    };
+
+    const handleMoveToGraveyardAction = (cardId: string) => {
+        if (player && player.id === viewedPlayer?.id) {
+            moveCard(sessionCode, player.id, "battlefield", "graveyard", cardId);
+        }
+    };
+
+    const handleMoveToHandAction = (cardId: string) => {
+        if (player && player.id === viewedPlayer?.id) {
+            moveCard(sessionCode, player.id, "battlefield", "hand", cardId);
+        }
+    };
+
+    const handleMoveToExileAction = (cardId: string) => {
+        if (player && player.id === viewedPlayer?.id) {
+            moveCard(sessionCode, player.id, "battlefield", "exile", cardId);
+        }
+    };
+
+    // --- EFFECT HOOKS (poprawka typowania) ---
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 't' && player && player.id === viewedPlayer?.id) {
@@ -72,14 +175,29 @@ export default function Battlefield({
             }
         };
 
+        const handleClickOutside = (event: MouseEvent | globalThis.MouseEvent) => {
+            // Używamy natywnego typu DOM MouseEvent
+            const targetNode = event.target as Node; 
+            if (isCardPanelOpen && cardPanelRef.current && !cardPanelRef.current.contains(targetNode)) {
+                closeCardPanel();
+            }
+        };
+
         window.addEventListener('keydown', handleKeyDown);
+        // Używamy globalThis.MouseEvent aby uniknąć błędów any, ponieważ event.target jest dostępne
+        document.addEventListener("mousedown", handleClickOutside as (event: globalThis.MouseEvent) => void); 
 
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
+            document.removeEventListener("mousedown", handleClickOutside as (event: globalThis.MouseEvent) => void);
         };
-    }, [player, viewedPlayer, hoveredCardId, rotateCard, sessionCode, selectedCards]);
+    }, [player, viewedPlayer, hoveredCardId, rotateCard, sessionCode, selectedCards, isCardPanelOpen]);
+
+    // --- OBSŁUGA ZAZNACZANIA MYSZKĄ (bez zmian) ---
 
     const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
+        closeCardPanel(); 
+        
         if (e.target === e.currentTarget && battlefieldRef.current) {
             setIsSelecting(true);
             const rect = battlefieldRef.current.getBoundingClientRect();
@@ -134,66 +252,74 @@ export default function Battlefield({
         setIsSelecting(false);
         setSelectionRect(null);
     };
+    
+    // --- OBSŁUGA DRAG & DROP (bez zmian) ---
 
-    if (!viewedPlayer) return null;
+    const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        if (!battlefieldRef.current) return;
+        const dropZoneRect = battlefieldRef.current.getBoundingClientRect();
 
-const handleDrop = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    if (!battlefieldRef.current) return;
-    const dropZoneRect = battlefieldRef.current.getBoundingClientRect();
+        const baseCardWidth = 150;
+        const baseCardHeight = 210;
 
-    // Zmienne pomocnicze dla bazowych wymiarów karty
-    const baseCardWidth = 150;
-    const baseCardHeight = 210;
+        const scaledCardWidth = baseCardWidth * (zoom / 140);
+        const scaledCardHeight = baseCardHeight * (zoom / 140);
 
-    // Nowość: Skalujemy wymiary karty na podstawie aktualnego zoomu
-    const scaledCardWidth = baseCardWidth * (zoom / 140);
-    const scaledCardHeight = baseCardHeight * (zoom / 140);
+        const isGroupDrag = e.dataTransfer.types.includes("text/json");
 
-    const isGroupDrag = e.dataTransfer.types.includes("text/json");
-
-    if (isGroupDrag) {
-        const draggedCardsData = JSON.parse(e.dataTransfer.getData("text/json")) as { cardId: string, x: number, y: number }[];
-        
-        const baseX = e.clientX - dropZoneRect.left - dragOffset.x;
-        const baseY = e.clientY - dropZoneRect.top - dragOffset.y;
-
-        const offsetX = 20;
-        const offsetY = 20;
-
-        draggedCardsData.forEach((cardData, index) => {
-            const newX = baseX + index * offsetX;
-            const newY = baseY + index * offsetY;
+        if (isGroupDrag) {
+            const draggedCardsData = JSON.parse(e.dataTransfer.getData("text/json")) as { cardId: string, x: number, y: number }[];
             
-            const clampedX = Math.max(0, Math.min(newX, dropZoneRect.width - scaledCardWidth));
-            const clampedY = Math.max(0, Math.min(newY, dropZoneRect.height - scaledCardHeight));
+            const baseX = e.clientX - dropZoneRect.left - dragOffset.x;
+            const baseY = e.clientY - dropZoneRect.top - dragOffset.y;
 
-            moveCard(sessionCode, viewedPlayer.id, "battlefield", "battlefield", cardData.cardId, clampedX, clampedY);
-        });
+            const offsetX = 20;
+            const offsetY = 20;
 
-        setSelectedCards([]);
-        setDraggedCards([]);
-        setIsDraggingGroup(false);
+            draggedCardsData.forEach((cardData, index) => {
+                const newX = baseX + index * offsetX;
+                const newY = baseY + index * offsetY;
+                
+                const clampedX = Math.max(0, Math.min(newX, dropZoneRect.width - scaledCardWidth));
+                const clampedY = Math.max(0, Math.min(newY, dropZoneRect.height - scaledCardHeight));
 
-    } else {
-        const cardId = e.dataTransfer.getData("cardId");
-        const from = e.dataTransfer.getData("from") as Zone;
-        const x = e.clientX - dropZoneRect.left - dragOffset.x;
-        const y = e.clientY - dropZoneRect.top - dragOffset.y;
-        
-        const clampedX = Math.max(0, Math.min(x, dropZoneRect.width - scaledCardWidth));
-        const clampedY = Math.max(0, Math.min(y, dropZoneRect.height - scaledCardHeight));
+                const targetPlayerId = viewedPlayer?.id || player?.id;
+                if (targetPlayerId) {
+                    moveCard(sessionCode, targetPlayerId, "battlefield", "battlefield", cardData.cardId, clampedX, clampedY);
+                }
+            });
 
-        if (from === "battlefield") {
-            moveCard(sessionCode, viewedPlayer.id, "battlefield", "battlefield", cardId, clampedX, clampedY);
+            setSelectedCards([]);
+            setDraggedCards([]);
+            setIsDraggingGroup(false);
+
         } else {
-            moveCard(sessionCode, player?.id as string, from, "battlefield", cardId, clampedX, clampedY);
+            const cardId = e.dataTransfer.getData("cardId");
+            const from = e.dataTransfer.getData("from") as Zone;
+            const x = e.clientX - dropZoneRect.left - dragOffset.x;
+            const y = e.clientY - dropZoneRect.top - dragOffset.y;
+            
+            const clampedX = Math.max(0, Math.min(x, dropZoneRect.width - scaledCardWidth));
+            const clampedY = Math.max(0, Math.min(y, dropZoneRect.height - scaledCardHeight));
+
+            if (from === "battlefield") {
+                const targetPlayerId = viewedPlayer?.id || player?.id;
+                if (targetPlayerId) {
+                    moveCard(sessionCode, targetPlayerId, "battlefield", "battlefield", cardId, clampedX, clampedY);
+                }
+            } else {
+                if (player) {
+                    moveCard(sessionCode, player.id, from, "battlefield", cardId, clampedX, clampedY);
+                }
+            }
         }
-    }
-};
+    };
 
     const handleDragStart = (e: DragEvent<HTMLDivElement>, card: CardOnField) => {
         if (viewedPlayerId !== null) return;
+        
+        closeCardPanel(); 
 
         const rect = e.currentTarget.getBoundingClientRect();
         const isSelected = selectedCards.some(c => c.id === card.card.id);
@@ -225,6 +351,8 @@ const handleDrop = (e: DragEvent<HTMLDivElement>) => {
         }
     };
 
+    // --- AKCJE BEZPOŚREDNIE NA KARCIE (bez zmian) ---
+    
     const handleCardRotation = (cardId: string) => {
         if (player && player.id === viewedPlayer?.id) {
             rotateCard(sessionCode, player.id, cardId);
@@ -236,6 +364,8 @@ const handleDrop = (e: DragEvent<HTMLDivElement>) => {
             incrementCardStats(sessionCode, player.id, cardId);
         }
     };
+
+    if (!viewedPlayer) return null;
 
     return (
         <div className="battlefield">
@@ -253,6 +383,10 @@ const handleDrop = (e: DragEvent<HTMLDivElement>) => {
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
+                onContextMenu={(e) => { 
+                    e.preventDefault(); 
+                    closeCardPanel(); 
+                }}
             >
                 {viewedPlayer.battlefield.map((c: CardOnField) => (
                     <div
@@ -274,10 +408,12 @@ const handleDrop = (e: DragEvent<HTMLDivElement>) => {
                             cursor: viewedPlayerId === null ? "grab" : "default",
                             transform: `scale(${zoom / 100}) rotate(${c.rotation}deg)`,
                             transformOrigin: 'center center',
+                            zIndex: selectedCards.some(card => card.id === c.card.id) ? 10 : 5
                         }}
                         draggable={viewedPlayerId === null}
                         onDragStart={(e) => handleDragStart(e, c)}
                         onDoubleClick={() => handleCardRotation(c.id)}
+                        onContextMenu={(e) => handleCardContextMenu(e, c)} 
                     >
                         <Card
                             card={c.card}
@@ -285,7 +421,7 @@ const handleDrop = (e: DragEvent<HTMLDivElement>) => {
                             ownerId={viewedPlayer.id}
                             getPlayerColorClass={getPlayerColorClass}
                             onCardStatsClick={handleCardStatsClick}
-                            cardOnField={c} // <-- WAŻNA ZMIANA: PRZEKAZYWANIE CAŁEGO OBIEKTU
+                            cardOnField={c} 
                         />
                     </div>
                 ))}
@@ -298,6 +434,8 @@ const handleDrop = (e: DragEvent<HTMLDivElement>) => {
                             top: selectionRect.y,
                             width: selectionRect.width,
                             height: selectionRect.height,
+                            position: 'absolute',
+                            zIndex: 2, 
                         }}
                     />
                 )}
@@ -307,8 +445,8 @@ const handleDrop = (e: DragEvent<HTMLDivElement>) => {
                 <div 
                     className="group-drag-indicator" 
                     style={{ 
-                        left: `${draggedCards[0]?.x}px`,
-                        top: `${draggedCards[0]?.y}px`,
+                        left: `${(draggedCards[0]?.x || 0) + 75}px`,
+                        top: `${(draggedCards[0]?.y || 0) + 105}px`,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -320,11 +458,27 @@ const handleDrop = (e: DragEvent<HTMLDivElement>) => {
                         width: '50px',
                         height: '50px',
                         position: 'absolute',
+                        transform: 'translate(-50%, -50%)',
                         zIndex: 1000
                     }}>
                     {selectedCards.length}
                 </div>
             )}
-        </div>
-    );
+            
+      {/* RENDEROWANIE PANELU OPCJI KARTY NA POLU BITWY */}
+      {isCardPanelOpen && selectedCardForPanel && panelPosition && (
+        <BattlefieldCardPanel // UŻYCIE NOWEJ NAZWY
+          card={selectedCardForPanel}
+          onClose={closeCardPanel}
+          panelRef={cardPanelRef}
+          position={panelPosition}
+          panelDirection={panelDirection} 
+          rotateCard={handleRotationAction}
+          moveCardToGraveyard={handleMoveToGraveyardAction}
+          moveCardToHand={handleMoveToHandAction}
+          moveCardToExile={handleMoveToExileAction}
+        />
+      )}
+    </div>
+  );
 }
