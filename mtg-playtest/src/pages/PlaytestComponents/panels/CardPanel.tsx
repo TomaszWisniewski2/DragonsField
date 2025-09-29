@@ -65,11 +65,11 @@ export const CardPanel: React.FC<CardPanelProps> = ({ onClose, panelRef, card, p
         
         {/* Lista opcji używa klasy CSS */}
         <div className="hand-panel-options-list">
-          <button className="hand-panel-btn" onClick={handleTap}>Tap</button>
-          <button className="hand-panel-btn" onClick={handleUntap}>Untap</button>
-          <button className="hand-panel-btn" onClick={handleMoveToGraveyard}>To Graveyard</button>
-          <button className="hand-panel-btn" onClick={handleAddCounter}>Add Counter</button>
-          <button className="hand-panel-btn" onClick={handleSetStats}>Set Power/Toughness</button>
+          <button className="hand-panel-btn" onClick={handleTap}>-Move to Top of Library</button>
+          <button className="hand-panel-btn" onClick={handleUntap}>-Move to Battlefield</button>
+          <button className="hand-panel-btn" onClick={handleMoveToGraveyard}>-Move to Graveyard</button>
+          <button className="hand-panel-btn" onClick={handleAddCounter}>-Move to Exile</button>
+          <button className="hand-panel-btn" onClick={handleSetStats}>-View Card</button>
         </div>
       </div>
     </div>

@@ -47,7 +47,6 @@ export const LibraryPanel: React.FC<LibraryPanelProps> = ({
           &times;
         </button>
         <div className="hand-panel-options-list">
-          <button className="hand-panel-btn" onClick={handleViewAll}>View All</button>
           <button className="hand-panel-btn" onClick={handleOtherAction(drawCard)}>Draw</button>
           <button className="hand-panel-btn" onClick={handleOtherAction(drawCard)}>-Draw X</button>
           <button className="hand-panel-btn" onClick={handleOtherAction(shuffleLibrary)}>-Shuffle</button>
@@ -56,7 +55,7 @@ export const LibraryPanel: React.FC<LibraryPanelProps> = ({
           <button className="hand-panel-btn" onClick={handleOtherAction(lookAtLibrary)}>-View Top Card</button>
           <button className="hand-panel-btn" onClick={handleOtherAction(lookAtLibrary)}>-View Bottom Card</button>
           <button className="hand-panel-btn" onClick={handleOtherAction(lookAtLibrary)}>-View Top X</button>
-          <button className="hand-panel-btn" onClick={handleOtherAction(lookAtLibrary)}>-View All</button>
+          <button className="hand-panel-btn" onClick={handleViewAll}>View All</button>
           <hr style={{ borderColor: '#444', margin: '2px 0' }} />
 
           <button className="hand-panel-btn" onClick={handleOtherAction(toHandTop)}>-Mill Top X</button>

@@ -91,17 +91,17 @@ export const BattlefieldCardPanel: React.FC<BattlefieldCardPanelProps> = ({
         {/* Lista opcji używa klas CSS */}
         <div className="hand-panel-options-list">
           <button className="hand-panel-btn" onClick={handleTap}>Tap/Untap (T)</button>
-          <button className="hand-panel-btn" onClick={handleTap}>Turn Over</button>
-          <button className="hand-panel-btn" onClick={handleTap}>Rotate 180</button>
+          <button className="hand-panel-btn" onClick={handleTap}>-Turn Over</button>
+          <button className="hand-panel-btn" onClick={handleTap}>-Rotate 180</button>
           <hr style={{ borderColor: '#444', margin: '2px 0' }} />
 
-          <button className="hand-panel-btn" onClick={handleSetStats}>Set P/T</button>
+          <button className="hand-panel-btn" onClick={handleSetStats}>-Set P/T</button>
           <hr style={{ borderColor: '#444', margin: '2px 0' }} />
 
           <button className="hand-panel-btn" onClick={handleAddCounter}>Add Counter</button>
           <button className="hand-panel-btn" onClick={(handleDecreaseCounter)}>Subtract Counter </button>
 
-          <button className="hand-panel-btn" onClick={handleAction(handleAddCounter)}>Set Counter</button>
+          <button className="hand-panel-btn" onClick={handleAction(handleAddCounter)}>-Set Counter</button>
           
           <hr style={{ borderColor: '#444', margin: '2px 0' }} />
 
@@ -110,9 +110,9 @@ export const BattlefieldCardPanel: React.FC<BattlefieldCardPanelProps> = ({
           <button className="hand-panel-btn action-graveyard" onClick={handleMoveToGraveyard}>Move to Graveyard</button>
           <button className="hand-panel-btn action-exile" onClick={handleMoveToExile}>Move to Exile</button>
           <hr style={{ borderColor: '#444', margin: '2px 0' }} />
-          <button className="hand-panel-btn action-exile" onClick={handleMoveToExile}>Make Token Copy</button>
+          <button className="hand-panel-btn action-exile" onClick={handleMoveToExile}>-Make Token Copy</button>
           <hr style={{ borderColor: '#444', margin: '2px 0' }} />
-          <button className="hand-panel-btn action-exile" onClick={handleMoveToExile}>View Card</button>
+          <button className="hand-panel-btn action-exile" onClick={handleMoveToExile}>-View Card</button>
           
         </div>
       </div>

@@ -45,11 +45,12 @@ return (
     &times;
    </button>
    <div className="hand-panel-options-list">
-    <button className="hand-panel-btn" onClick={handleViewAll}>Wyświetl wszystko</button>
+    <button className="hand-panel-btn" onClick={handleViewAll}>View All</button>
     <hr style={{ borderColor: '#444', margin: '2px 0' }} />
-    <button className="hand-panel-btn" onClick={handleOtherAction(moveToLibrary)}>Przenieś wszystko do Biblioteki (Góra)</button>
-    <button className="hand-panel-btn" onClick={handleOtherAction(handleMoveAllToGraveyard)}>Przenieś wszystko na Cmentarz</button>
-    <button className="hand-panel-btn" onClick={handleOtherAction(moveToHand)}>Przenieś wszystko do Ręki</button>
+    <button className="hand-panel-btn" onClick={handleOtherAction(moveToLibrary)}>Move All to Library</button>
+    <button className="hand-panel-btn" onClick={handleOtherAction(moveToLibrary)}>-Move All to Bottom of Library</button>
+    <button className="hand-panel-btn" onClick={handleOtherAction(handleMoveAllToGraveyard)}>Move All to Graveyard</button>
+    <button className="hand-panel-btn" onClick={handleOtherAction(moveToHand)}>Move All to Hand</button>
    </div>
   </div>
  </div>
