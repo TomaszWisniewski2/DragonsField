@@ -89,7 +89,7 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 8px;
+  padding: 8px ;
   /* Zaktualizuj border-top, aby używał zmiennej koloru gracza */
   border-top: 2px solid var(--player-color);
   background: #201f1f;
@@ -105,9 +105,8 @@
   display: flex;
   gap: 5px;
   overflow-x: auto;
-  padding-top: 5px;
-  padding-bottom: 5px;
-  padding-left: 5px;
+  padding: 5px;
+
   overflow: hidden; /* ukrywa nadmiar powiększonych kart */
 }
 .zones {

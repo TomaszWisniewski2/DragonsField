@@ -3,12 +3,12 @@
 import React from "react";
 import "./StartGameModal.css";
 
-interface StartGameModalProps {
+interface ResetHandModalProps {
   onClose: () => void;
   onConfirm: () => void;
 }
 
-const StartGameModal: React.FC<StartGameModalProps> = ({ onClose, onConfirm }) => {
+const ResetHandModal: React.FC<ResetHandModalProps> = ({ onClose, onConfirm }) => {
   return (
     <div className="modal-overlay">
       <div className="modal-content">
@@ -16,7 +16,7 @@ const StartGameModal: React.FC<StartGameModalProps> = ({ onClose, onConfirm }) =
           &times;
         </button>
         <div className="modal-body">
-          <p>Do you wanna start the game?</p>
+          <p>Do you wanna Reset the Hand?</p>
         </div>
         <div className="modal-footer">
           <button className="modal-button modal-button-confirm" onClick={onConfirm}>
@@ -31,4 +31,4 @@ const StartGameModal: React.FC<StartGameModalProps> = ({ onClose, onConfirm }) =
   );
 };
 
-export default StartGameModal;
+export default ResetHandModal;

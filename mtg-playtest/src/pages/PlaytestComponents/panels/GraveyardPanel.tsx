@@ -2,15 +2,23 @@
 
 import React from "react";
 import type { PanelProps } from "../Bottombar"; // Zaktualizuj ścieżkę
+import type { Zone } from "../../../components/types";
 
 // INTERFEJS DLA GRAVEYARD PANEL
 interface GraveyardPanelProps extends PanelProps {
   toggleGraveyardViewer: () => void; 
+  handleMoveAllCards: (from: Zone, to: Zone) => void; 
 }
 
 // --- KOMPONENT GRAVEYARD PANEL ---
 
-export const GraveyardPanel: React.FC<GraveyardPanelProps> = ({ onClose, panelRef, toggleGraveyardViewer }) => {
+export const GraveyardPanel: React.FC<GraveyardPanelProps> = ({
+     onClose,
+      panelRef,
+       toggleGraveyardViewer,
+        handleMoveAllCards 
+
+     }) => {
   
   const handleViewAll = () => {
     onClose(); // Zamknij ten panel
@@ -18,10 +26,13 @@ export const GraveyardPanel: React.FC<GraveyardPanelProps> = ({ onClose, panelRe
   };
 
   // Pozostałe akcje
-  const lookAtGraveyard = () => console.log("Looking at graveyard...");
   const shuffleToLibrary = () => console.log("Shuffling graveyard to library...");
-  const toHandTop = () => console.log("Moving card to hand (top)...");
-  const toLibraryBottom = () => console.log("Moving card to library (bottom)...");
+
+
+    const moveToLibrary = () => handleMoveAllCards("graveyard", "library");
+    const moveToExile = () => handleMoveAllCards("graveyard", "exile"); 
+    const moveToHand = () => handleMoveAllCards("graveyard", "hand");
+
 
   const handleOtherAction = (action: () => void) => () => {
     onClose();
@@ -36,10 +47,11 @@ export const GraveyardPanel: React.FC<GraveyardPanelProps> = ({ onClose, panelRe
         </button>
         <div className="hand-panel-options-list">
           <button className="hand-panel-btn" onClick={handleViewAll}>View All </button>
-          <button className="hand-panel-btn" onClick={handleOtherAction(lookAtGraveyard)}>Look at Graveyard</button>
-          <button className="hand-panel-btn" onClick={handleOtherAction(shuffleToLibrary)}>Shuffle Graveyard to Library</button>
-          <button className="hand-panel-btn" onClick={handleOtherAction(toHandTop)}>To Hand (Top)</button>
-          <button className="hand-panel-btn" onClick={handleOtherAction(toLibraryBottom)}>To Library (Bottom)</button>
+         <hr style={{ borderColor: '#444', margin: '2px 0' }} />
+          <button className="hand-panel-btn" onClick={handleOtherAction(moveToLibrary)}>Move All to Library</button>
+          <button className="hand-panel-btn" onClick={handleOtherAction(shuffleToLibrary)}>-Move All to Bottom of Library</button>
+          <button className="hand-panel-btn" onClick={handleOtherAction(moveToExile)}>Move All to Exile</button>
+          <button className="hand-panel-btn" onClick={handleOtherAction(moveToHand)}>Move All to Hand</button>
         </div>
       </div>
     </div>

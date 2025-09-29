@@ -14,6 +14,9 @@ export interface BattlefieldCardPanelProps extends PanelProps {
   moveCardToGraveyard: (cardId: string) => void;
   moveCardToHand: (cardId: string) => void;
   moveCardToExile: (cardId: string) => void;
+  moveCardToTopOfLibrary: (cardId: string) => void;
+  onCardCounterClick?: (cardId: string) => void;
+  onDecreaseCardStatsClick?: (cardId: string) => void;
 }
 
 // --- KOMPONENT BATTLEFIELD CARD PANEL ---
@@ -27,15 +30,27 @@ export const BattlefieldCardPanel: React.FC<BattlefieldCardPanelProps> = ({
     rotateCard, 
     moveCardToGraveyard, 
     moveCardToHand,
-    moveCardToExile
+    moveCardToExile,
+    moveCardToTopOfLibrary,
+    onCardCounterClick,
+    onDecreaseCardStatsClick,
 }) => {
+
+    const handleAction = (action: () => void) => () => {
+    onClose();
+    action(); 
+  };
   // Funkcje obsługi
   const handleTap = () => { rotateCard(card.id); onClose(); }; 
   const handleMoveToGraveyard = () => { moveCardToGraveyard(card.id); onClose(); };
   const handleMoveToHand = () => { moveCardToHand(card.id); onClose(); };
   const handleMoveToExile = () => { moveCardToExile(card.id); onClose(); };
-  const handleAddCounter = () => { onClose(); console.log(`Adding counter to ${card.name}`); };
+
+  const handleAddCounter = () => {onCardCounterClick?.(card.id);};
+  const handleDecreaseCounter = () => {onDecreaseCardStatsClick?.(card.id);};
+
   const handleSetStats = () => { onClose(); console.log(`Setting P/T for ${card.name}`); };
+  const handleMovetoTopofLibrary = () => { moveCardToTopOfLibrary(card.id); onClose(); };
 
 
   // Logika transformacji oparta na kierunku (pozostaje inline dla pozycjonowania)
@@ -76,14 +91,28 @@ export const BattlefieldCardPanel: React.FC<BattlefieldCardPanelProps> = ({
         {/* Lista opcji używa klas CSS */}
         <div className="hand-panel-options-list">
           <button className="hand-panel-btn" onClick={handleTap}>Tap/Untap (T)</button>
-          <button className="hand-panel-btn" onClick={handleAddCounter}>Add Counter</button>
+          <button className="hand-panel-btn" onClick={handleTap}>Turn Over</button>
+          <button className="hand-panel-btn" onClick={handleTap}>Rotate 180</button>
+          <hr style={{ borderColor: '#444', margin: '2px 0' }} />
+
           <button className="hand-panel-btn" onClick={handleSetStats}>Set P/T</button>
+          <hr style={{ borderColor: '#444', margin: '2px 0' }} />
+
+          <button className="hand-panel-btn" onClick={handleAddCounter}>Add Counter</button>
+          <button className="hand-panel-btn" onClick={(handleDecreaseCounter)}>Subtract Counter </button>
+
+          <button className="hand-panel-btn" onClick={handleAction(handleAddCounter)}>Set Counter</button>
           
           <hr style={{ borderColor: '#444', margin: '2px 0' }} />
-          
-          <button className="hand-panel-btn action-graveyard" onClick={handleMoveToGraveyard}>To Graveyard</button>
-          <button className="hand-panel-btn action-hand" onClick={handleMoveToHand}>To Hand</button>
-          <button className="hand-panel-btn action-exile" onClick={handleMoveToExile}>To Exile</button>
+
+          <button className="hand-panel-btn action-hand" onClick={handleMoveToHand}>Move to Hand</button>
+          <button className="hand-panel-btn action-hand" onClick={handleMovetoTopofLibrary}>Move to Top of Library</button>
+          <button className="hand-panel-btn action-graveyard" onClick={handleMoveToGraveyard}>Move to Graveyard</button>
+          <button className="hand-panel-btn action-exile" onClick={handleMoveToExile}>Move to Exile</button>
+          <hr style={{ borderColor: '#444', margin: '2px 0' }} />
+          <button className="hand-panel-btn action-exile" onClick={handleMoveToExile}>Make Token Copy</button>
+          <hr style={{ borderColor: '#444', margin: '2px 0' }} />
+          <button className="hand-panel-btn action-exile" onClick={handleMoveToExile}>View Card</button>
           
         </div>
       </div>

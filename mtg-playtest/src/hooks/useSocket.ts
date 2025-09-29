@@ -120,23 +120,39 @@ export const useSocket = (serverUrl: string) => {
         emitEvent("increment_card_stats", { code, playerId, cardId });
     }, [emitEvent]);
 
-    return {
-        connected,
-        session,
-        playerId,
-        createSession,
-        joinSession,
-        startGame,
-        draw,
-        shuffle,
-        resetPlayer,
-        changeLife,
-        moveCard,
-        rotateCard,
-        nextTurn,
-        changeMana,
-        changeCounters,
-        incrementCardStats,
-        allSessionStats,
-    };
+    const moveAllCards = useCallback((code: string, playerId: string, from: Zone, to: Zone) => {
+        emitEvent("moveAllCards", { code, playerId, from, to });
+    }, [emitEvent]);
+
+    const incrementCardCounters = useCallback((code: string, playerId: string, cardId: string) => {
+        emitEvent("increment_card_counters", { code, playerId, cardId });
+    }, [emitEvent]);
+
+        const decreaseCardCounters = useCallback((code: string, playerId: string, cardId: string) => {
+        emitEvent("decrease_card_counters", { code, playerId, cardId });
+    }, [emitEvent]);
+
+  return {
+    connected,
+    session,
+    playerId,
+    createSession,
+    joinSession,
+    startGame,
+    draw,
+    shuffle,
+    resetPlayer,
+    changeLife,
+    moveCard,
+    rotateCard,
+    nextTurn,
+    changeMana,
+    changeCounters,
+    incrementCardStats,
+    allSessionStats,
+    incrementCardCounters,
+    decreaseCardCounters,
+        // DODANIE NOWEJ FUNKCJI DO ZWRACANEGO OBIEKTU
+        moveAllCards,
+  };
 };

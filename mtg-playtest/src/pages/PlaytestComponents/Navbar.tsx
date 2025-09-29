@@ -3,7 +3,7 @@ import type { Player, Session } from "../../components/types";
 import "./../Playtest.css";
 import "./Navbar.css";
 import CountersPanel from "../../components/CountersPanel";
-
+//import { useNavigate } from "react-router-dom";
 interface NavbarProps {
   player: Player | undefined;
   session: Session;
@@ -15,19 +15,22 @@ interface NavbarProps {
   otherPlayers: Player[];
   viewedPlayerId: string | null;
   changeCounters: (code: string, playerId: string, type: string, newValue: number) => void;
+  handleGoHome: () => void;
 }
 
 export default function Navbar({
   player,
   session,
   changeLife,
-  setZoom,
+  //setZoom,
   setViewedPlayerId,
   getPlayerColorClass,
-  zoom,
+  //zoom,
   viewedPlayerId,
   changeCounters,
+  handleGoHome,
 }: NavbarProps) {
+  //const navigate = useNavigate();
   // Stan dla paneli liczników (lokalny, tylko do kontrolowania widoczności)
   const [showCounters, setShowCounters] = useState(false);
   const [showOtherCountersForPlayerId, setShowOtherCountersForPlayerId] = useState<string | null>(null);
@@ -83,6 +86,8 @@ export default function Navbar({
   const toggleOtherCountersPanel = (pId: string) => {
     setShowOtherCountersForPlayerId(prevId => (prevId === pId ? null : pId));
   };
+
+
 
   if (!player || !session) return null;
 
@@ -170,9 +175,14 @@ export default function Navbar({
             </div>
           );
         })}
-        <button className="nav-button" onClick={() => setZoom(Math.max(50, zoom - 10))}>-</button>
-        <span className="nav-text">{zoom}%</span>
-        <button className="nav-button" onClick={() => setZoom(zoom + 10)}>+</button>
+
+            <div className="navbar-right">
+                {/* ZMIANA: Używamy nowego propa onClick */}
+                <button className="nav-button2" onClick={handleGoHome}>
+                    🐲 Dragons Field
+                </button>
+            </div>
+        
       </div>
     </div>
   );

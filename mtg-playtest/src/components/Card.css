@@ -1,18 +1,28 @@
+/* Definiujemy stałą bazową szerokość karty */
+:root {
+    --card-base-width: 100px;
+}
+
 .card-container {
-    position: relative; /* Dodaj position: relative, aby pozycjonowanie absolutne działało */
-    width: 100px;
+    position: relative;
+    /* Usuwamy width: 100px; i zastępujemy go zmienną */
+    width: var(--card-base-width);
+    height: calc(var(--card-base-width) * 1.4); /* Typowa proporcja MTG */
+    
     text-align: center;
     border: 1px solid #000;
-    transition: border 0.2s, transform 0.2s;
+    
+    /* Zmieniamy transition, aby uwzględnić transformację dla skalowania */
+    transition: border 0.2s, transform 0.2s; 
     display: inline-block;
+    
+    /* KLUCZOWA ZMIANA: Skalowanie jest teraz sterowane przez React */
+    transform-origin: top left; /* Upewnij się, że skalowanie jest od lewego górnego rogu */
 }
 
 .card-container:hover {
-    /* Użyj outline zamiast border, aby uniknąć zmiany rozmiaru /
-    border: 1px solid transparent; / Utrzymaj tę samą szerokość ramki /
-    outline: 1.5px solid var(--player-color); / Dodaj ramkę outline /
-    outline-offset: -1px; / Upewnij się, że outline nie dodaje dodatkowego rozmiaru */
-    transform: scale(1.05);
+    box-shadow: 0 0 0 1px var(--player-color) inset;
+    transform: scale(1.05); /* Skalowanie przy hover zostaje, ale to jest dodatkowe do głównego zoomu */
     transform-origin: center center;
 }
 

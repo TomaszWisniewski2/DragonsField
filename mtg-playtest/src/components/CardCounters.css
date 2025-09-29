@@ -1,0 +1,28 @@
+.card-counters {
+  background-color: rgba(0, 0, 0, 0.847); /* Czarne tło z przezroczystością */
+  color: white;
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-size: 15px;
+  font-weight: bold;
+  display: inline-block;
+  transition: border 0.2s;
+}
+
+.card-counters:hover {
+  border: 1.5px solid var(--player-color);
+  cursor: pointer;
+}
+
+.counter-value {
+  white-space: nowrap; /* Zapobiega łamaniu się tekstu */
+}
+
+/* KONTENER POZYCJONUJĄCY NA KARCIE */
+.card-counters-indicator {
+ position: absolute;
+ bottom: 0px; 
+ left: 5px; /* Ustawienie w lewym dolnym rogu */
+ z-index: 10;
+ padding: 0px;
+}

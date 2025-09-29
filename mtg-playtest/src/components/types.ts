@@ -24,6 +24,7 @@ export interface CardOnField {
         power: number;
         toughness: number;
     }
+     counters: number ;
 }
 
 export interface Player {
