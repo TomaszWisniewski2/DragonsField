@@ -132,6 +132,10 @@ export const useSocket = (serverUrl: string) => {
         emitEvent("decrease_card_counters", { code, playerId, cardId });
     }, [emitEvent]);
 
+        // NOWA FUNKCJA USTAWIAJĄCA POWER/TOUGHNESS
+  const setCardStats = useCallback((code: string, playerId: string, cardId: string, powerValue: number, toughnessValue: number) => {
+    emitEvent("set_card_stats", { code, playerId, cardId, powerValue, toughnessValue });
+  }, [emitEvent]);
   return {
     connected,
     session,
@@ -154,5 +158,6 @@ export const useSocket = (serverUrl: string) => {
     decreaseCardCounters,
         // DODANIE NOWEJ FUNKCJI DO ZWRACANEGO OBIEKTU
         moveAllCards,
+        setCardStats,
   };
 };

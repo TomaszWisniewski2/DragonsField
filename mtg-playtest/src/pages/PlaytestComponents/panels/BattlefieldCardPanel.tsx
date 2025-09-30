@@ -1,121 +1,227 @@
 // src/pages/PlaytestComponents/panels/BattlefieldCardPanel.tsx
 
-import React from "react";
-// Importujemy wspólne typy. Dostosuj ścieżkę do Twojej struktury katalogów
-import type { CardType, PanelProps } from "../../../components/types"; 
+import React, { useState, useEffect, useCallback } from "react";
+// Importujemy wspólne typy, włączając CardOnField, zgodnie z Battlefield.tsx
+import type { CardType, PanelProps, CardOnField } from "../../../components/types"; 
+
 
 // INTERFEJS DLA PANELU KARTY NA POLU BITWY
 export interface BattlefieldCardPanelProps extends PanelProps {
-  card: CardType;
-  position: { x: number; y: number };
-  panelDirection: 'up' | 'down'; 
-  // Funkcje akcji na polu bitwy (przekazywane z Battlefield)
-  rotateCard: (cardId: string) => void;
-  moveCardToGraveyard: (cardId: string) => void;
-  moveCardToHand: (cardId: string) => void;
-  moveCardToExile: (cardId: string) => void;
-  moveCardToTopOfLibrary: (cardId: string) => void;
-  onCardCounterClick?: (cardId: string) => void;
-  onDecreaseCardStatsClick?: (cardId: string) => void;
+// USUWAMY: currentPower: number;
+// USUWAMY: currentToughness: number;
+card: CardType; // Podstawowe dane karty (nazwa, obraz)
+fieldCard: CardOnField; // Pełne dane karty na polu (współrzędne, rotacja, aktualne statystyki, ID akcji)
+position: { x: number; y: number };
+panelDirection: 'up' | 'down'; 
+// Funkcje akcji na polu bitwy (przekazywane z Battlefield)
+rotateCard: (cardId: string) => void;
+moveCardToGraveyard: (cardId: string) => void;
+moveCardToHand: (cardId: string) => void;
+moveCardToExile: (cardId: string) => void;
+moveCardToTopOfLibrary: (cardId: string) => void;
+onCardCounterClick?: (cardId: string) => void;
+onDecreaseCardStatsClick?: (cardId: string) => void;
+// PROP DLA USTAWIANIA STATYSTYK
+onSetCardStats: (powerValue: number, toughnessValue: number) => void;
 }
 
 // --- KOMPONENT BATTLEFIELD CARD PANEL ---
 
 export const BattlefieldCardPanel: React.FC<BattlefieldCardPanelProps> = ({ 
-    onClose, 
-    panelRef, 
-    card, 
-    position, 
-    panelDirection, 
-    rotateCard, 
-    moveCardToGraveyard, 
-    moveCardToHand,
-    moveCardToExile,
-    moveCardToTopOfLibrary,
-    onCardCounterClick,
-    onDecreaseCardStatsClick,
+onClose, 
+panelRef, 
+card, 
+fieldCard, 
+position, 
+panelDirection, 
+rotateCard, 
+moveCardToGraveyard, 
+moveCardToHand,
+moveCardToExile,
+moveCardToTopOfLibrary,
+onCardCounterClick,
+onDecreaseCardStatsClick,
+onSetCardStats, 
 }) => {
+const [isSettingStats, setIsSettingStats] = useState(false);
+const [powerInput, setPowerInput] = useState<string>('');
+const [toughnessInput, setToughnessInput] = useState<string>('');
 
-    const handleAction = (action: () => void) => () => {
-    onClose();
-    action(); 
-  };
-  // Funkcje obsługi
-  const handleTap = () => { rotateCard(card.id); onClose(); }; 
-  const handleMoveToGraveyard = () => { moveCardToGraveyard(card.id); onClose(); };
-  const handleMoveToHand = () => { moveCardToHand(card.id); onClose(); };
-  const handleMoveToExile = () => { moveCardToExile(card.id); onClose(); };
+const cardOnFieldId = fieldCard.id;
 
-  const handleAddCounter = () => {onCardCounterClick?.(card.id);};
-  const handleDecreaseCounter = () => {onDecreaseCardStatsClick?.(card.id);};
-
-  const handleSetStats = () => { onClose(); console.log(`Setting P/T for ${card.name}`); };
-  const handleMovetoTopofLibrary = () => { moveCardToTopOfLibrary(card.id); onClose(); };
+// 1. Bezpieczne parsowanie bazowych statystyk
+const basePower = card.basePower && !isNaN(parseInt(card.basePower, 10)) ? parseInt(card.basePower, 10) : 0;
+const baseToughness = card.baseToughness && !isNaN(parseInt(card.baseToughness, 10)) ? parseInt(card.baseToughness, 10) : 0;
 
 
-  // Logika transformacji oparta na kierunku (pozostaje inline dla pozycjonowania)
-  const transformStyle = `translate(-50%, ${panelDirection === 'up' ? '-100%' : '0'})`;
+// 2. Opakowanie funkcji pomocniczych w useCallback
+const calculateEffectivePower = useCallback(
+ (mod: number) => mod + basePower, 
+ [basePower] // Zależność od basePower
+);
 
-  return (
-    // Używamy klas CSS do stylizacji wnętrza, zachowując dynamiczne pozycjonowanie inline
-    <div
-      className="hand-panel-floating card-panel-override2"
-      ref={panelRef}
-      style={{
-        position: 'fixed', 
-        top: `${position.y}px`,
-        left: `${position.x}px`,
-        transform: transformStyle, 
-        zIndex: 9999, 
-        // Usunięto: minWidth, backgroundColor, borderRadius, boxShadow (przeniesione do CSS)
-      }}
-    >
-      <div className="hand-panel-content">
-        <button className="hand-panel-close-btn" onClick={onClose}>
-          &times;
-        </button>
-        
-        {/* Tytuł karty w panelu */}
-        <h4 
-            style={{ 
-                color: 'white', 
-                margin: '0 12px 5px 12px', 
-                paddingTop: '10px', 
-                borderBottom: '1px solid #444', 
-                paddingBottom: '5px' 
-            }}
-        >
-            {card.name}
-        </h4>
-        
-        {/* Lista opcji używa klas CSS */}
-        <div className="hand-panel-options-list">
-          <button className="hand-panel-btn" onClick={handleTap}>Tap/Untap (T)</button>
-          <button className="hand-panel-btn" onClick={handleTap}>-Turn Over</button>
-          <button className="hand-panel-btn" onClick={handleTap}>-Rotate 180</button>
-          <hr style={{ borderColor: '#444', margin: '2px 0' }} />
+const calculateEffectiveToughness = useCallback(
+ (mod: number) => mod + baseToughness,
+ [baseToughness] // Zależność od baseToughness
+);
 
-          <button className="hand-panel-btn" onClick={handleSetStats}>-Set P/T</button>
-          <hr style={{ borderColor: '#444', margin: '2px 0' }} />
 
-          <button className="hand-panel-btn" onClick={handleAddCounter}>Add Counter</button>
-          <button className="hand-panel-btn" onClick={(handleDecreaseCounter)}>Subtract Counter </button>
+// 3. Użycie funkcji w useEffect
+useEffect(() => {
+ // fieldCard.stats.power/toughness przechowują modyfikator (liczniki)
+ const initialPower = calculateEffectivePower(fieldCard.stats.power);
+ const initialToughness = calculateEffectiveToughness(fieldCard.stats.toughness);
+ 
+ setPowerInput(initialPower.toString());
+ setToughnessInput(initialToughness.toString());
+ setIsSettingStats(false); 
+ 
+ // 4. Dodanie funkcji do tablicy zależności (teraz są stabilne)
+}, [
+ calculateEffectivePower, 
+ calculateEffectiveToughness, 
+ fieldCard.id, 
+ fieldCard.stats.power, 
+ fieldCard.stats.toughness
+]);
 
-          <button className="hand-panel-btn" onClick={handleAction(handleAddCounter)}>-Set Counter</button>
-          
-          <hr style={{ borderColor: '#444', margin: '2px 0' }} />
 
-          <button className="hand-panel-btn action-hand" onClick={handleMoveToHand}>Move to Hand</button>
-          <button className="hand-panel-btn action-hand" onClick={handleMovetoTopofLibrary}>Move to Top of Library</button>
-          <button className="hand-panel-btn action-graveyard" onClick={handleMoveToGraveyard}>Move to Graveyard</button>
-          <button className="hand-panel-btn action-exile" onClick={handleMoveToExile}>Move to Exile</button>
-          <hr style={{ borderColor: '#444', margin: '2px 0' }} />
-          <button className="hand-panel-btn action-exile" onClick={handleMoveToExile}>-Make Token Copy</button>
-          <hr style={{ borderColor: '#444', margin: '2px 0' }} />
-          <button className="hand-panel-btn action-exile" onClick={handleMoveToExile}>-View Card</button>
-          
-        </div>
-      </div>
+const handleAction = (action: () => void) => () => {
+ onClose();
+ action(); 
+};
+
+// Funkcje obsługi używają cardOnFieldId
+const handleTap = () => { rotateCard(cardOnFieldId); onClose(); }; 
+const handleMoveToGraveyard = () => { moveCardToGraveyard(cardOnFieldId); onClose(); };
+const handleMoveToHand = () => { moveCardToHand(cardOnFieldId); onClose(); };
+const handleMoveToExile = () => { moveCardToExile(cardOnFieldId); onClose(); };
+const handleAddCounter = () => {onCardCounterClick?.(cardOnFieldId);};
+const handleDecreaseCounter = () => {onDecreaseCardStatsClick?.(cardOnFieldId);};
+const handleMovetoTopofLibrary = () => { moveCardToTopOfLibrary(cardOnFieldId); onClose(); };
+
+
+const handleSetStatsClick = (e: React.MouseEvent) => {
+ e.stopPropagation(); 
+ // Ustawiamy input na wartość efektywną
+ const initialPower = calculateEffectivePower(fieldCard.stats.power);
+ const initialToughness = calculateEffectiveToughness(fieldCard.stats.toughness);
+ 
+ setPowerInput(initialPower.toString());
+ setToughnessInput(initialToughness.toString());
+ setIsSettingStats(true); 
+};
+
+const handleConfirmSetStats = () => {
+ // Parsujemy wartość wpisaną przez użytkownika (Wartość Efektywna)
+ const effectivePower = parseInt(powerInput, 10);
+ const effectiveToughness = parseInt(toughnessInput, 10);
+
+ if (!isNaN(effectivePower) && !isNaN(effectiveToughness)) {
+  
+  // Obliczamy modyfikator = Wartość Efektywna - Wartość Bazowa
+  const modifierPower = effectivePower - basePower;
+  const modifierToughness = effectiveToughness - baseToughness;
+
+  // Wysyłamy modyfikatory (liczniki)
+  onSetCardStats(modifierPower, modifierToughness);
+ } else {
+  console.error("Invalid P/T values");
+ }
+};
+
+const handleCancelSetStats = () => {
+ setIsSettingStats(false);
+};
+
+const transformStyle = `translate(-50%, ${panelDirection === 'up' ? '-100%' : '0'})`;
+
+return (
+ <div
+  className="hand-panel-floating card-panel-override2"
+  ref={panelRef}
+  style={{
+   position: 'fixed', 
+   top: `${position.y}px`,
+   left: `${position.x}px`,
+   transform: transformStyle, 
+   zIndex: 9999, 
+  }}
+ >
+  <div className="hand-panel-content">
+   <button className="hand-panel-close-btn" onClick={onClose}>
+    &times;
+   </button>
+   
+   <h4 
+    style={{ 
+     color: 'white', 
+     margin: '0 12px 5px 12px', 
+     paddingTop: '10px', 
+     borderBottom: '1px solid #444', 
+     paddingBottom: '5px' 
+    }}
+   >
+    {card.name}
+   </h4>
+   
+   {isSettingStats ? (
+    <div className="set-stats-form" style={{ padding: '10px 12px' }}>
+     <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+      <input 
+       type="number" 
+       value={powerInput} 
+       onChange={(e) => setPowerInput(e.target.value)} 
+       placeholder="Siła"
+       style={{ width: '50px', padding: '5px', borderRadius: '4px', border: '1px solid #666', backgroundColor: '#333', color: 'white' }}
+      />
+      <input 
+       type="number" 
+       value={toughnessInput} 
+       onChange={(e) => setToughnessInput(e.target.value)} 
+       placeholder="Wytrzymałość"
+       style={{ width: '80px', padding: '5px', borderRadius: '4px', border: '1px solid #666', backgroundColor: '#333', color: 'white' }}
+      />
+     </div>
+     <button 
+      className="hand-panel-btn action-confirm" 
+      onClick={handleConfirmSetStats}
+     >
+      Ustaw P/T
+     </button>
+     <button 
+      className="hand-panel-btn action-cancel" 
+      onClick={handleCancelSetStats}
+      style={{ marginTop: '5px' }}
+     >
+      Anuluj
+     </button>
     </div>
-  );
+   ) : (
+    <div className="hand-panel-options-list">
+     <button className="hand-panel-btn" onClick={handleTap}>Tap/Untap (T)</button>
+     <button className="hand-panel-btn" onClick={handleAction(() => rotateCard(cardOnFieldId))}>-Turn Over</button>
+     <button className="hand-panel-btn" onClick={handleAction(() => rotateCard(cardOnFieldId))}>-Rotate 180</button>
+     <hr style={{ borderColor: '#444', margin: '2px 0' }} />
+
+     <button className="hand-panel-btn" onClick={handleSetStatsClick}>Set P/T</button>
+     <hr style={{ borderColor: '#444', margin: '2px 0' }} />
+
+     <button className="hand-panel-btn" onClick={handleAddCounter}>Add Counter</button>
+     <button className="hand-panel-btn" onClick={handleDecreaseCounter}>Subtract Counter </button>   
+     <hr style={{ borderColor: '#444', margin: '2px 0' }} />
+
+     <button className="hand-panel-btn action-hand" onClick={handleMoveToHand}>Move to Hand</button>
+     <button className="hand-panel-btn action-hand" onClick={handleMovetoTopofLibrary}>Move to Top of Library</button>
+     <button className="hand-panel-btn action-graveyard" onClick={handleMoveToGraveyard}>Move to Graveyard</button>
+     <button className="hand-panel-btn action-exile" onClick={handleMoveToExile}>Move to Exile</button>
+     <hr style={{ borderColor: '#444', margin: '2px 0' }} />
+     <button className="hand-panel-btn action-exile" onClick={handleAction(() => console.log('Make Token'))}>-Make Token Copy</button>
+     <hr style={{ borderColor: '#444', margin: '2px 0' }} />
+     <button className="hand-panel-btn action-exile" onClick={handleAction(() => console.log('View Card'))}>-View Card</button>
+    </div>
+   )}
+  </div>
+ </div>
+);
 };
