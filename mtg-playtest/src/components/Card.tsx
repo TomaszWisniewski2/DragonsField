@@ -83,7 +83,7 @@ export default function Card({
    )}
    
    {/* Wskaźnik siły/wytrzymałości (PRAWY DÓŁ) */}
-   {from === "battlefield" && cardOnField && card.basePower !== undefined && card.baseToughness !== undefined && (
+   {from === "battlefield" && cardOnField && card.basePower !== null && card.baseToughness !== null && (
     <div className="card-stats-indicator">
      <CardStats
       basePower={card.basePower}

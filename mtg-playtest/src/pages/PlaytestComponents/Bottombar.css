@@ -93,7 +93,7 @@
     position: fixed;
     /* bottom: 85px - dostosuj tę wartość, aby panel wyświetlał się na pożądanej wysokości */
     bottom: 200px; 
-    left: 1520px; 
+    left: 79%; 
     z-index: 9000; 
     transform: translateX(0);
     transition: transform 0.3s ease-out; 
@@ -106,7 +106,7 @@
     position: fixed;
     bottom: 200px; 
     /* Dostosuj pozycję lewej krawędzi dla Graveyard */
-    left: 1640px; 
+    left: 85%; 
     z-index: 9000; 
     transform: translateX(0);
     transition: transform 0.3s ease-out; 
@@ -117,7 +117,7 @@
     position: fixed;
     bottom: 200px; 
     /* Dostosuj pozycję lewej krawędzi dla Exile */
-    left: 1705px; 
+    left: 88.5%; 
     z-index: 9000; 
     transform: translateX(0);
     transition: transform 0.3s ease-out; 
@@ -174,4 +174,41 @@
 
 .hand-panel-options-list::-webkit-scrollbar-track {
     background: #2c2c2c;
+}
+
+
+.hand {
+  /* Używasz flex: 1, co oznacza, że zajmie dostępną przestrzeń. 
+     Jeśli chcesz stałą, maksymalną szerokość, użyj max-width lub stałej szerokości. 
+     Upewnij się, że .fixed-hand-width w .hand spełnia to, np. max-width: 600px; */
+  flex: 1; 
+  /* max-width: 600px; <--- Rozważ dodanie tego, jeśli flex: 1 jest za szeroki */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Utrzymuje porządek wewnątrz Bottombar */
+}
+.hand-cards {
+  display: flex;
+  gap: 4px;
+  padding: 1px;
+  
+  /* --- KLUCZOWE ZMIANY DLA SCROLLOWANIA --- */
+  /* Upewnij się, że ten element nie jest ograniczony wysokością/szerokością tak, aby
+     karty mogły go "rozciągnąć" poza widoczne granice .hand, 
+     a następnie przewiń ten element. */
+  
+  /* Ustawienie dla przewijania poziomego, gdy zawartość przekroczy szerokość */
+  overflow-x: auto; 
+  /* Ukrywa przewijanie pionowe, jeśli przypadkiem by się pojawiło */
+  overflow-y: hidden; 
+  /* Aby upewnić się, że karty się nie łamią na następną linię */
+  white-space: nowrap; 
+}
+
+/* Opcjonalnie: Jeśli używasz klasy scrollable-hand-cards z poprzedniego kroku */
+/*
+.scrollable-hand-cards {
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
 }

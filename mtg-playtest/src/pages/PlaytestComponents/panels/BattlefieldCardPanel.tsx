@@ -15,6 +15,7 @@ position: { x: number; y: number };
 panelDirection: 'up' | 'down'; 
 // Funkcje akcji na polu bitwy (przekazywane z Battlefield)
 rotateCard: (cardId: string) => void;
+rotateCard180: (cardId: string) => void;
 moveCardToGraveyard: (cardId: string) => void;
 moveCardToHand: (cardId: string) => void;
 moveCardToExile: (cardId: string) => void;
@@ -23,6 +24,9 @@ onCardCounterClick?: (cardId: string) => void;
 onDecreaseCardStatsClick?: (cardId: string) => void;
 // PROP DLA USTAWIANIA STATYSTYK
 onSetCardStats: (powerValue: number, toughnessValue: number) => void;
+// 1. DODANIE PROPSA flipCard
+flipCard: (cardId: string) => void; 
+
 }
 
 // --- KOMPONENT BATTLEFIELD CARD PANEL ---
@@ -42,6 +46,8 @@ moveCardToTopOfLibrary,
 onCardCounterClick,
 onDecreaseCardStatsClick,
 onSetCardStats, 
+rotateCard180,
+flipCard, 
 }) => {
 const [isSettingStats, setIsSettingStats] = useState(false);
 const [powerInput, setPowerInput] = useState<string>('');
@@ -93,13 +99,14 @@ const handleAction = (action: () => void) => () => {
 
 // Funkcje obsługi używają cardOnFieldId
 const handleTap = () => { rotateCard(cardOnFieldId); onClose(); }; 
+const handle180 = () => { rotateCard180(cardOnFieldId); onClose(); }; 
 const handleMoveToGraveyard = () => { moveCardToGraveyard(cardOnFieldId); onClose(); };
 const handleMoveToHand = () => { moveCardToHand(cardOnFieldId); onClose(); };
 const handleMoveToExile = () => { moveCardToExile(cardOnFieldId); onClose(); };
 const handleAddCounter = () => {onCardCounterClick?.(cardOnFieldId);};
 const handleDecreaseCounter = () => {onDecreaseCardStatsClick?.(cardOnFieldId);};
 const handleMovetoTopofLibrary = () => { moveCardToTopOfLibrary(cardOnFieldId); onClose(); };
-
+const handleFlipCard = () => {flipCard(cardOnFieldId); };
 
 const handleSetStatsClick = (e: React.MouseEvent) => {
  e.stopPropagation(); 
@@ -200,8 +207,12 @@ return (
    ) : (
     <div className="hand-panel-options-list">
      <button className="hand-panel-btn" onClick={handleTap}>Tap/Untap (T)</button>
-     <button className="hand-panel-btn" onClick={handleAction(() => rotateCard(cardOnFieldId))}>-Turn Over</button>
-     <button className="hand-panel-btn" onClick={handleAction(() => rotateCard(cardOnFieldId))}>-Rotate 180</button>
+       {card.hasSecondFace && (
+         <button className="hand-panel-btn action-flip" onClick={handleFlipCard}>
+             {fieldCard.isFlipped ? 'Flip Back' : 'Flip to Other Side'} 
+         </button>
+       )}
+     <button className="hand-panel-btn" onClick={handle180}>Rotate 180</button>
      <hr style={{ borderColor: '#444', margin: '2px 0' }} />
 
      <button className="hand-panel-btn" onClick={handleSetStatsClick}>Set P/T</button>

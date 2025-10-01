@@ -35,6 +35,7 @@ interface BattlefieldProps {
  setDragOffset: React.Dispatch<React.SetStateAction<{ x: number; y: number }>>;
  sessionCode: string;
  rotateCard: (code: string, playerId: string, cardId: string) => void;
+ rotateCard180:(code: string, playerId: string, cardId: string) => void;
  setSelectedCards: (cards: CardType[]) => void;
  selectedCards: CardType[];
  playerColorClass: string;
@@ -45,6 +46,7 @@ interface BattlefieldProps {
  incrementCardCounters: (code: string, playerId: string, cardId: string) => void; 
  // FUNKCJA USTAWIAJĄCA STATYSTYKI
  setCardStats: (code: string, playerId: string, cardId: string, powerValue: number, toughnessValue: number) => void; 
+ flipCard: (code: string, playerId: string, cardId: string) => void;
 }
 
 export default function Battlefield({
@@ -69,6 +71,8 @@ export default function Battlefield({
  // ODBIERAMY PROP
  incrementCardCounters, 
  setCardStats,
+ rotateCard180,
+  flipCard,
 }: BattlefieldProps) {
  const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
  const [isSelecting, setIsSelecting] = useState(false);
@@ -143,9 +147,25 @@ export default function Battlefield({
  
  // --- FUNKCJE AKCJI DLA PANELU (używają ID z CardOnField) ---
  
+  // 2. NOWA FUNKCJA AKCJI DO ODRWRACANIA KARTY
+  const handleFlipCardAction = (cardId: string) => {
+    // Sprawdzamy, czy karta ma drugą stronę (dla bezpieczeństwa, choć przycisk w panelu powinien to już sprawdzić)
+    const card = selectedFieldCardForPanel?.card;
+    if (player && player.id === viewedPlayer?.id && card?.hasSecondFace) {
+        flipCard(sessionCode, player.id, cardId);
+    }
+    // Nie zamykamy panelu, żeby użytkownik mógł łatwo odwrócić z powrotem.
+  };
+
  const handleRotationAction = (cardId: string) => {
   if (player && player.id === viewedPlayer?.id) {
    rotateCard(sessionCode, player.id, cardId);
+  }
+ };
+
+  const handleRotation180Action = (cardId: string) => {
+  if (player && player.id === viewedPlayer?.id) {
+   rotateCard180(sessionCode, player.id, cardId);
   }
  };
 
@@ -524,6 +544,8 @@ const handleSetCardStatsAction = (powerValue: number, toughnessValue: number) =>
   onCardCounterClick={handleCardCounterClick}
   onDecreaseCardStatsClick={handleDecreaseCardStatsClick}
   onSetCardStats={handleSetCardStatsAction}
+  rotateCard180={handleRotation180Action}
+  flipCard={handleFlipCardAction}
   />
  )}
  </div>

@@ -1,7 +1,88 @@
 import { useState } from "react";
+// Zakładam, że w pliku api/scryfall.ts masz funkcje:
+// getCardByName(name: string): Promise<ScryfallCardData>
+// getCardImageUrl(data: ScryfallCardData): string | null
 import { getCardByName, getCardImageUrl } from "../api/scryfall";
 import "./DeckManager.css";
 import type { CardType } from "../components/types";
+
+// Wymaga zdefiniowania oczekiwanej struktury danych ze Scryfall, 
+// przynajmniej w minimalnym zakresie potrzebnym do pobierania.
+// Ta struktura jest uproszczona i nie jest pełną definicją Scryfall API.
+// Powinieneś mieć ten typ w pliku `../api/scryfall.ts` lub podobnym.
+// Na potrzeby tego przykładu, zakładam że wygląda to mniej więcej tak:
+interface ScryfallCardFace {
+    name: string;
+    mana_cost: string;
+    type_line: string;
+    power?: string;
+    toughness?: string;
+    loyalty?: number;
+    image_uris?: {
+        normal: string;
+    };
+}
+
+interface ScryfallCardData {
+    id: string;
+    name: string;
+    mana_cost?: string;
+    type_line?: string;
+    power?: string;
+    toughness?: string;
+    loyalty?: number;
+    image_status: string;
+    image_uris?: {
+        normal: string;
+    };
+    // NOWOŚĆ: Pole dla kart DFC
+    card_faces?: ScryfallCardFace[];
+}
+
+/**
+ * Funkcja pomocnicza do pobierania danych karty z pojedynczej strony
+ * (albo głównej strony, albo strony z card_faces)
+ */
+function mapScryfallDataToCardType(data: ScryfallCardData): CardType {
+    // 1. Bezpieczne sprawdzenie, czy karta jest DFC
+    const isDfc = data.card_faces && data.card_faces.length === 2;
+    
+    // 2. Bezpieczne przypisanie stron (używamy operatora '!' tylko po sprawdzeniu isDfc)
+    const primaryFace = isDfc ? data.card_faces![0] : data;
+    const secondFace = isDfc ? data.card_faces![1] : undefined;
+
+    // Pobieranie obrazka dla pierwszej strony
+    // Używamy opcjonalnego łańcuchowania (?.), aby bezpiecznie uzyskać obrazek
+    const primaryImage = isDfc ? primaryFace.image_uris?.normal : getCardImageUrl(data);
+    const primaryLoyalty = primaryFace.type_line?.includes("Planeswalker") ? primaryFace.loyalty : null;
+
+    // Dane dla drugiej strony (jeśli istnieje)
+    const secondImage = secondFace?.image_uris?.normal;
+    const secondLoyalty = secondFace?.type_line?.includes("Planeswalker") ? secondFace.loyalty : null;
+
+    return {
+        id: data.id,
+        // Używamy nazwy pierwszej strony dla głównej nazwy karty w Twoim obiekcie CardType
+        name: primaryFace.name, 
+        image: primaryImage || undefined,
+        mana_cost: primaryFace.mana_cost,
+        type_line: primaryFace.type_line,
+        // DFC data.power/toughness są na stronach, non-DFC są na obiekcie głównym (data)
+        basePower: (primaryFace.power === "*" ? "0" : primaryFace.power) || null,
+        baseToughness: (primaryFace.toughness === "*" ? "0" : primaryFace.toughness) || null,
+        loyalty: primaryLoyalty,
+
+        // Dane DFC
+        hasSecondFace: isDfc,
+        secondFaceName: secondFace?.name,
+        secondFaceImage: secondImage,
+        secondFaceManaCost: secondFace?.mana_cost,
+        secondFaceTypeLine: secondFace?.type_line,
+        secondFaceBasePower: (secondFace?.power === "*" ? "0" : secondFace?.power) || null,
+        secondFaceBaseToughness: (secondFace?.toughness === "*" ? "0" : secondFace?.toughness) || null,
+        secondFaceLoyalty: secondLoyalty,
+    };
+}
 
 export default function DeckManager() {
     const [query, setQuery] = useState("");
@@ -32,18 +113,11 @@ export default function DeckManager() {
         if (!query.trim()) return;
         setLoading(true);
         try {
-            const data = await getCardByName(query.trim());
+            // Dane zwracane przez Scryfall API
+            const data: ScryfallCardData = await getCardByName(query.trim());
             
-            const card: CardType = {
-                id: data.id,
-                name: data.name,
-                image: getCardImageUrl(data) || undefined,
-                mana_cost: data.mana_cost,
-                type_line: data.type_line,
-                basePower: data.power === "*" ? "0" : data.power,
-                baseToughness: data.toughness === "*" ? "0" : data.toughness,
-                loyalty: data.type_line.includes("Planeswalker") ? data.loyalty : null,
-            };
+            // Używamy nowej funkcji mapującej
+            const card: CardType = mapScryfallDataToCardType(data);
 
             const newDeck = [...deck, card];
             setDeck(newDeck);
@@ -85,30 +159,26 @@ export default function DeckManager() {
         setLoading(true);
         try {
             for (const line of lines) {
+                // ... (reszta logiki parsowania jest bez zmian)
                 const match = line.match(/^(\d+)\s+([^(]+)(?:\s+\(.*\))?/);
                 if (!match) continue;
 
                 const count = parseInt(match[1], 10);
                 const name = match[2].trim();
 
-                const data = await getCardByName(name);
+                // Dane zwracane przez Scryfall API
+                const data: ScryfallCardData = await getCardByName(name);
                 
-                const card: CardType = {
-                    id: data.id,
-                    name: data.name,
-                    image: getCardImageUrl(data) || undefined,
-                    mana_cost: data.mana_cost,
-                    type_line: data.type_line,
-                    basePower: data.power === "*" ? "0" : data.power,
-                    baseToughness: data.toughness === "*" ? "0" : data.toughness,
-                    loyalty: data.type_line.includes("Planeswalker") ? data.loyalty : null,
-                };
+                // Używamy nowej funkcji mapującej
+                const card: CardType = mapScryfallDataToCardType(data);
                 
-                if (data.type_line.includes("Legendary Creature") && !newCommander) {
+                // Sprawdzamy typ linii karty (pierwszej strony)
+                if (card.type_line?.includes("Legendary Creature") && !newCommander) {
                     newCommander = card;
                 }
 
                 for (let i = 0; i < count; i++) {
+                    // Generujemy unikalne ID dla każdej kopii karty
                     newDeck.push({ ...card, id: `${card.id}-${i}-${Date.now()}` });
                 }
             }
@@ -214,6 +284,12 @@ export default function DeckManager() {
                             />
                         ) : (
                             <div style={{ height: "160px" }}>{card.name}</div>
+                        )}
+                        {/* Wyróżnienie karty DFC */}
+                        {card.hasSecondFace && (
+                            <p style={{ margin: '4px 0', fontSize: '0.8em', color: 'lightblue' }}>
+                                Karta dwustronna
+                            </p>
                         )}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
                             <button

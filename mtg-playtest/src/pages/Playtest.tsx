@@ -41,6 +41,8 @@ const {
  setCardStats, // <--- DODANA NOWA FUNKCJA
  allSessionStats, 
  moveAllCards,
+ rotateCard180,
+ flipCard,
 } = useSocket(import.meta.env.VITE_SERVER_URL || "http://localhost:3001");
 
 const navigate = useNavigate();
@@ -371,6 +373,8 @@ return (
   decreaseCardCounters= {decreaseCardCounters}
   incrementCardCounters={incrementCardCounters}
   setCardStats={setCardStats} // <--- PRZEKAZANIE NOWEJ FUNKCJI DO BATTLEFIELD
+  rotateCard180={rotateCard180}
+  flipCard={flipCard} 
  />
  <Sidebar
   startGame={handleOpenStartGameModal}

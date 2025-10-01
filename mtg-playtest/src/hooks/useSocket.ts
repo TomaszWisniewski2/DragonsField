@@ -136,6 +136,15 @@ export const useSocket = (serverUrl: string) => {
   const setCardStats = useCallback((code: string, playerId: string, cardId: string, powerValue: number, toughnessValue: number) => {
     emitEvent("set_card_stats", { code, playerId, cardId, powerValue, toughnessValue });
   }, [emitEvent]);
+
+      const rotateCard180 = useCallback((code: string, playerId: string, cardId: string) => {
+        emitEvent("rotateCard180", { code, playerId, cardId });
+    }, [emitEvent]);
+
+        const flipCard = useCallback((code: string, playerId: string, cardId: string) => {
+        emitEvent("flipCard", { code, playerId, cardId });
+    }, [emitEvent]);
+
   return {
     connected,
     session,
@@ -159,5 +168,7 @@ export const useSocket = (serverUrl: string) => {
         // DODANIE NOWEJ FUNKCJI DO ZWRACANEGO OBIEKTU
         moveAllCards,
         setCardStats,
+        rotateCard180,
+        flipCard,
   };
 };

@@ -242,7 +242,7 @@ export default function Bottombar({
 
     {/* Obszar RĘKI (Hand) */}
     <div
-     className="hand"
+     className="hand fixed-hand-width"
      onDragOver={(e) => e.preventDefault()}
      onDrop={(e) => handleDrop(e, "hand")}
     >
