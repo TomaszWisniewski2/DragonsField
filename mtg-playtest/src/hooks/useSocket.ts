@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import io, { Socket } from "socket.io-client";
-import type { Player, Session, CardType, CardOnField, Zone, SessionType } from "../components/types";
+import type { Player, Session, CardType, CardOnField, Zone, SessionType, SortCriteria } from "../components/types"; 
 
 
 export interface SessionStats {
@@ -96,9 +96,18 @@ export const useSocket = (serverUrl: string) => {
         emitEvent("changeLife", { code, playerId, newLife });
     }, [emitEvent]);
 
-    const moveCard = useCallback((code: string, playerId: string, from: Zone, to: Zone, cardId: string, x?: number, y?: number) => {
-        emitEvent("moveCard", { code, playerId, from, to, cardId, x, y });
-    }, [emitEvent]);
+const moveCard = useCallback((
+    code: string,
+    playerId: string,
+    from: Zone,
+    to: Zone,
+    cardId: string,
+    x?: number,
+    y?: number,
+    position?: number // NOWE
+) => {
+    emitEvent("moveCard", { code, playerId, from, to, cardId, x, y, position });
+}, [emitEvent]);
 
     const rotateCard = useCallback((code: string, playerId: string, cardId: string) => {
         emitEvent("rotateCard", { code, playerId, cardId });
@@ -145,6 +154,10 @@ export const useSocket = (serverUrl: string) => {
         emitEvent("flipCard", { code, playerId, cardId });
     }, [emitEvent]);
 
+      const sortHand = useCallback((code: string, playerId: string, criteria: SortCriteria) => {
+    emitEvent("sortHand", { code, playerId, criteria });
+  }, [emitEvent]);
+
   return {
     connected,
     session,
@@ -170,5 +183,6 @@ export const useSocket = (serverUrl: string) => {
         setCardStats,
         rotateCard180,
         flipCard,
+        sortHand,
   };
 };

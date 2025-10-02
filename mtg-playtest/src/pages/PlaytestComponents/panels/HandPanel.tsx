@@ -2,26 +2,35 @@
 
 import React from "react";
 import type { PanelProps } from "../Bottombar"; // Zaktualizuj ścieżkę do PanelProps
-import type { Zone } from "../../../components/types";
+import type { Zone,SortCriteria  } from "../../../components/types";
 
 // Importy CSS/Stylów, jeśli są potrzebne w pliku panelu
 interface HandPanelProps extends PanelProps {
  // DODAJEMY NOWY PROP - Oczekujemy UPROSZCZONEJ funkcji
 handleMoveAllCards: (from: Zone, to: Zone) => void; 
+sortHand: (code: string, playerId: string, criteria: SortCriteria) => void;
+sessionCode: string;
+playerId: string;
 }
 // --- KOMPONENT HAND PANEL ---
 
 export const HandPanel: React.FC<HandPanelProps> = ({ 
     onClose,
      panelRef,
-     handleMoveAllCards 
+     handleMoveAllCards,
+     sortHand, // <--- ODBIERAMY NOWY PROP
+     sessionCode,
+     playerId
+     
      }) => {
   // Pomocnicza funkcja do obsługi akcji, która zawsze zamyka panel
   const handleAction = (action: () => void) => () => {
     onClose();
     action(); 
   };
-  
+   // Funkcja sortująca
+ const handleSort = (criteria: SortCriteria) => 
+  handleAction(() => sortHand(sessionCode, playerId, criteria));
   // Przykładowe akcje (aktualnie puste)
 
   const shuffleHand = () => console.log("Shuffling hand...");
@@ -40,6 +49,12 @@ export const HandPanel: React.FC<HandPanelProps> = ({
           &times;
         </button>
         <div className="hand-panel-options-list">
+               {/* NOWE PRZYCISKI SORTOWANIA */}
+     <div style={{ padding: '0 12px', color: '#ccc', fontSize: '0.85em', fontWeight: 'bold' }}>SORTUJ:</div>
+     <button className="hand-panel-btn" onClick={handleSort("mana_cost")}>Wg Kosztu Many</button>
+     <button className="hand-panel-btn" onClick={handleSort("name")}>Wg Nazwy</button>
+     <button className="hand-panel-btn" onClick={handleSort("type_line")}>Wg Typu</button>
+     <hr style={{ borderColor: '#444', margin: '2px 0' }} />
           <button className="hand-panel-btn" onClick={handleAction(moveToLibrary)}>Move All to Library</button>
           <button className="hand-panel-btn" onClick={handleAction(shuffleHand)}>-Move All to Bottom of Library</button>
           <button className="hand-panel-btn" onClick={handleAction(handleMoveAllToGraveyard)}>Move All to Graveyard</button>

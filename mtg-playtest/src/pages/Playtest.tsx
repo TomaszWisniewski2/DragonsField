@@ -43,6 +43,7 @@ const {
  moveAllCards,
  rotateCard180,
  flipCard,
+ sortHand,
 } = useSocket(import.meta.env.VITE_SERVER_URL || "http://localhost:3001");
 
 const navigate = useNavigate();
@@ -418,6 +419,7 @@ return (
   toggleExileViewer={toggleExileViewer}
   handleMoveAllCards={handleMoveAllCards}
   zoom={zoom}
+  sortHand={sortHand}
  />
 
   {isLibraryViewerOpen && (

@@ -3,6 +3,8 @@ export type Zone = "hand" | "library" | "battlefield" | "graveyard" | "exile" | 
 
 export type SessionType = "standard" | "commander";
 
+export type SortCriteria = "mana_cost" | "name" | "type_line";
+
 export interface CardType {
   id: string;
   name: string;

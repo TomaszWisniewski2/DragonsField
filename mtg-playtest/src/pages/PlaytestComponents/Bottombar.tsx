@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import Card from "../../components/Card";
-import type { Player, Zone, Session, CardType } from "../../components/types";
+import type { Player, Zone, Session, CardType, SortCriteria } from "../../components/types";
 import "./../Playtest.css";
 import "./Bottombar.css";
 
@@ -46,6 +46,7 @@ from: Zone,
 to: Zone,
 ) => void;
 zoom: number;
+sortHand: (code: string, playerId: string, criteria: SortCriteria) => void;
 }
 
 // Export PanelProps dla pozostałych komponentów
@@ -65,6 +66,7 @@ export default function Bottombar({
  toggleExileViewer,
  handleMoveAllCards, // Właściwa funkcja z useSocket
  zoom,
+ sortHand,
 }: BottombarProps) {
 
  // --- STANY I REFERENCJE ---
@@ -128,6 +130,8 @@ export default function Bottombar({
   }
  };
 
+
+ 
  // --- LOGIKA PRZEŁĄCZANIA PANELI (BEZ ZMIAN) ---
  
  const toggleHandPanel = (e: React.MouseEvent<HTMLElement>) => {
@@ -455,7 +459,9 @@ export default function Bottombar({
      onClose={() => setIsHandPanelOpen(false)}
      panelRef={handPanelRef}
      handleMoveAllCards={handleMoveAllCards} 
-
+     sortHand={sortHand}
+     sessionCode={session.code} // DODAJEMY SESSION CODE I PLAYER ID
+  playerId={player.id} 
     />
    )}
 
