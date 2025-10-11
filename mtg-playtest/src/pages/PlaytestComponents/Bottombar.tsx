@@ -107,16 +107,17 @@ export default function Bottombar({
   };
 
 
-  const toggleLibraryTopRevealed = () => {
-    // Resetujemy podgląd hovera przy przełączeniu
-    if (isLibraryTopRevealed) {
-      handleCardHover(null);
-    } else if (player && player.library.length > 0) {
-      // Jeśli włączamy i jest karta, od razu podglądamy ją
-      handleCardHover(player.library[player.library.length - 1]);
-    }
-    setIsLibraryTopRevealed(prev => !prev);
-  };
+ const toggleLibraryTopRevealed = () => {
+  // Resetujemy podgląd hovera przy przełączeniu
+  if (isLibraryTopRevealed) {
+   handleCardHover(null);
+  } else if (player && player.library.length > 0) {
+   // Jeśli włączamy i jest karta, od razu podglądamy ją
+   // POPRAWKA: Używamy indeksu [0] dla górnej karty
+   handleCardHover(player.library[0]); 
+  }
+  setIsLibraryTopRevealed(prev => !prev);
+ };
 
   const handleCardContextMenu = (e: React.MouseEvent<HTMLDivElement>, card: CardType) => {
     e.preventDefault();
@@ -358,7 +359,7 @@ export default function Bottombar({
                 <div
                   draggable
                   onDragStart={(e) => {
-                    const cardId = player.library[player.library.length - 1].id;
+                    const cardId = player.library[0].id; 
                     e.dataTransfer.setData("cardId", cardId);
                     e.dataTransfer.setData("from", "library");
                     // Używamy rewersu jako obrazu przeciągania
@@ -384,7 +385,7 @@ export default function Bottombar({
                   {isLibraryTopRevealed ? (
                     // WIDOK ODKRYTEJ KARTY
                     <Card
-                      card={player.library[player.library.length - 1]}
+                      card={player.library[0]}
                       from="library"
                       ownerId={player.id}
                       getPlayerColorClass={getPlayerColorClass}
