@@ -44,6 +44,8 @@ const {
  rotateCard180,
  flipCard,
  sortHand,
+ moveAllCardsToBottomOfLibrary,
+ discardRandomCard,
 } = useSocket(import.meta.env.VITE_SERVER_URL || "http://localhost:3001");
 
 const navigate = useNavigate();
@@ -420,6 +422,11 @@ return (
   handleMoveAllCards={handleMoveAllCards}
   zoom={zoom}
   sortHand={sortHand}
+  sessionCode={session.code}
+  viewedPlayer={viewedPlayer}
+  moveAllCardsToBottomOfLibrary={moveAllCardsToBottomOfLibrary}
+  discardRandomCard={discardRandomCard}
+  shuffle={handleShuffle}
  />
 
   {isLibraryViewerOpen && (

@@ -1,5 +1,11 @@
 // src/components/types.ts
-export type Zone = "hand" | "library" | "battlefield" | "graveyard" | "exile" | "commanderZone";
+export type Zone =
+  | "hand"
+  | "library"
+  | "battlefield"
+  | "graveyard"
+  | "exile"
+  | "commanderZone";
 
 export type SessionType = "standard" | "commander";
 
@@ -14,7 +20,7 @@ export interface CardType {
   basePower?: string | null;
   baseToughness?: string | null;
   loyalty?: number | null;
-  
+
   // NOWE POLA DLA DRUGIEJ STRONY KARTY (DFC)
   hasSecondFace?: boolean; // Flaga ułatwiająca sprawdzenie, czy karta ma drugą stronę
   secondFaceName?: string;
@@ -36,8 +42,8 @@ export interface CardOnField {
   stats: {
     power: number;
     toughness: number;
-  }
-  counters: number ;
+  };
+  counters: number;
 }
 
 export interface Player {
@@ -52,7 +58,14 @@ export interface Player {
   exile: CardType[];
   commanderZone: CardType[];
   commander?: CardType;
-  manaPool: { W: number; U: number; B: number; R: number; G: number; C: number };
+  manaPool: {
+    W: number;
+    U: number;
+    B: number;
+    R: number;
+    G: number;
+    C: number;
+  };
   counters: { [key: string]: number };
 }
 

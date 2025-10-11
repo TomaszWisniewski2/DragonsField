@@ -34,7 +34,7 @@ export default function Navbar({
   // Stan dla paneli liczników (lokalny, tylko do kontrolowania widoczności)
   const [showCounters, setShowCounters] = useState(false);
   const [showOtherCountersForPlayerId, setShowOtherCountersForPlayerId] = useState<string | null>(null);
-  
+
   // Referencje do elementów DOM
   const countersRef = useRef<HTMLDivElement>(null);
   const otherCountersRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -67,11 +67,11 @@ export default function Navbar({
       changeCounters(session.code, player.id, type, newCounters[type]);
     }
   };
-  
+
   const toggleCountersPanel = () => {
     setShowCounters(!showCounters);
   };
-  
+
   // Funkcje obsługi dla paneli w prawej sekcji (dla innych graczy)
   const handleOtherCounterChange = (pId: string, type: string, value: number) => {
     if (session) {
@@ -82,7 +82,7 @@ export default function Navbar({
       }
     }
   };
-  
+
   const toggleOtherCountersPanel = (pId: string) => {
     setShowOtherCountersForPlayerId(prevId => (prevId === pId ? null : pId));
   };
@@ -91,7 +91,7 @@ export default function Navbar({
 
   if (!player || !session) return null;
 
-// Użyj domyślnego obiektu, aby uniknąć błędów
+  // Użyj domyślnego obiektu, aby uniknąć błędów
   const playerCounters = player.counters || {};
 
   return (
@@ -120,11 +120,11 @@ export default function Navbar({
           </a>
           {showCounters && (
             <CountersPanel
-               counters={playerCounters}
+              counters={playerCounters}
               onCounterChange={handleCounterChange}
               onClose={toggleCountersPanel}
               playerColorClass={getPlayerColorClass(player.id)}
-              // BRAK propa 'readOnly' - domyślnie jest 'false'
+            // BRAK propa 'readOnly' - domyślnie jest 'false'
             />
           )}
         </div>
@@ -134,10 +134,10 @@ export default function Navbar({
         <span className="turn-indicator">Turn {session.turn}</span>
       </div>
 
-       <div className="right-section">
+      <div className="right-section">
         {session.players.map((p, index) => {
           const otherPlayerCounters = p.counters || {};
-          
+
           return (
             <div
               key={p.id}
@@ -150,8 +150,8 @@ export default function Navbar({
               >
                 {index + 1}: {p.name}: {p.life} HP
               </span>
-              <div 
-                className="relative counters-btn-container" 
+              <div
+                className="relative counters-btn-container"
                 ref={(el) => { otherCountersRefs.current[p.id] = el; }}
               >
                 <a
@@ -176,13 +176,13 @@ export default function Navbar({
           );
         })}
 
-            <div className="navbar-right">
-                {/* ZMIANA: Używamy nowego propa onClick */}
-                <button className="nav-button2" onClick={handleGoHome}>
-                    🐲 Dragons Field
-                </button>
-            </div>
-        
+        <div className="navbar-right">
+          {/* ZMIANA: Używamy nowego propa onClick */}
+          <button className="nav-button2" onClick={handleGoHome}>
+            🐲 Dragons Field
+          </button>
+        </div>
+
       </div>
     </div>
   );

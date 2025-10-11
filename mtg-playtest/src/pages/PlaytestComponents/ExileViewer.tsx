@@ -31,7 +31,7 @@ export default function ExileViewer({ player, toggleExileViewer, playerColorClas
           <div className="card-image-preview">
             {hoveredCardImage && <img src={hoveredCardImage} alt="Card Preview" />}
           </div>
-          
+
           <ul className="card-list">
             {player.exile.map((card) => (
               <li
@@ -42,10 +42,10 @@ export default function ExileViewer({ player, toggleExileViewer, playerColorClas
                   e.dataTransfer.setData("from", "exile"); // Ważne: Zmiana na "exile"
 
                   if (dragImageRef.current && card.image) {
-                      dragImageRef.current.src = card.image;
-                      e.dataTransfer.setDragImage(dragImageRef.current, 50, 70);
+                    dragImageRef.current.src = card.image;
+                    e.dataTransfer.setDragImage(dragImageRef.current, 50, 70);
                   } else {
-                      e.dataTransfer.setDragImage(new Image(), 0, 0);
+                    e.dataTransfer.setDragImage(new Image(), 0, 0);
                   }
                 }}
                 onMouseEnter={() => setHoveredCardImage(card.image || null)}
@@ -56,11 +56,11 @@ export default function ExileViewer({ player, toggleExileViewer, playerColorClas
           </ul>
         </div>
         <div className="library-viewer-filter">
-          <input 
-            type="text" 
-            placeholder="Filter" 
+          <input
+            type="text"
+            placeholder="Filter"
             value={filterText}
-            onChange={(e) => setFilterText(e.target.value)} 
+            onChange={(e) => setFilterText(e.target.value)}
           />
         </div>
       </div>

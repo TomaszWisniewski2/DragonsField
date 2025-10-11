@@ -31,7 +31,7 @@ export default function LibraryViewer({ player, toggleLibraryViewer, playerColor
           <div className="card-image-preview">
             {hoveredCardImage && <img src={hoveredCardImage} alt="Card Preview" />}
           </div>
-          
+
           <ul className="card-list">
             {player.library.map((card) => (
               <li
@@ -43,10 +43,10 @@ export default function LibraryViewer({ player, toggleLibraryViewer, playerColor
 
                   // Ustaw src ukrytego obrazu i użyj go jako obrazu do przeciągania
                   if (dragImageRef.current && card.image) {
-                      dragImageRef.current.src = card.image;
-                      e.dataTransfer.setDragImage(dragImageRef.current, 50, 70);
+                    dragImageRef.current.src = card.image;
+                    e.dataTransfer.setDragImage(dragImageRef.current, 50, 70);
                   } else {
-                      e.dataTransfer.setDragImage(new Image(), 0, 0);
+                    e.dataTransfer.setDragImage(new Image(), 0, 0);
                   }
                 }}
                 onMouseEnter={() => setHoveredCardImage(card.image || null)}
@@ -58,15 +58,15 @@ export default function LibraryViewer({ player, toggleLibraryViewer, playerColor
 
         </div>
         <div className="library-viewer-filter">
-          <input 
-            type="text" 
-            placeholder="Filter" 
+          <input
+            type="text"
+            placeholder="Filter"
             value={filterText}
-            onChange={(e) => setFilterText(e.target.value)} 
+            onChange={(e) => setFilterText(e.target.value)}
           />
         </div>
-      {/* Dodaj ukryty obraz do przeciągania */}
-      <img ref={dragImageRef} className="drag-image-placeholder" alt="Drag Placeholder" />
+        {/* Dodaj ukryty obraz do przeciągania */}
+        <img ref={dragImageRef} className="drag-image-placeholder" alt="Drag Placeholder" />
       </div>
     </div>
   );

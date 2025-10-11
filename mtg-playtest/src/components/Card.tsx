@@ -1,8 +1,8 @@
 import type { CardType, CardOnField } from "./types";
 import "./Card.css";
-import ManaCost from './ManaCost'; 
-import CardStats from './CardStats'; 
-import CardCounters from './CardCounters'; 
+import ManaCost from './ManaCost';
+import CardStats from './CardStats';
+import CardCounters from './CardCounters';
 
 // --- INTERFEJS PROPSÓW ---
 interface CardProps {
@@ -10,7 +10,7 @@ interface CardProps {
   from?: string;
   ownerId?: string;
   getPlayerColorClass?: (id: string) => string;
-  onCardStatsClick?: (cardId: string) => void; 
+  onCardStatsClick?: (cardId: string) => void;
   onCardCounterClick?: (cardId: string) => void; // DEDYKOWANY PROP DLA LICZNIKÓW
   onDecreaseCardStatsClick?: (cardId: string) => void;
   cardOnField?: CardOnField;
@@ -20,101 +20,101 @@ interface CardProps {
 // --- KOMPONENT CARD ---
 
 export default function Card({
- card,
- from,
- ownerId,
- getPlayerColorClass,
- onCardStatsClick, 
- onCardCounterClick, 
- // Odbieramy nowy prop
- cardOnField,
- zoom = 100,
+  card,
+  from,
+  ownerId,
+  getPlayerColorClass,
+  onCardStatsClick,
+  onCardCounterClick,
+  // Odbieramy nowy prop
+  cardOnField,
+  zoom = 100,
 }: CardProps) {
- if (!card) return null;
+  if (!card) return null;
 
- const colorClass = getPlayerColorClass && ownerId ? getPlayerColorClass(ownerId) : '';
- const scaleFactor = zoom / 100;
+  const colorClass = getPlayerColorClass && ownerId ? getPlayerColorClass(ownerId) : '';
+  const scaleFactor = zoom / 100;
 
- // DEDYKOWANA LOGIKA KLIKNIĘCIA DLA LICZNIKÓW (+1)
- const handleCounterIncrement = () => {
-  // Używamy opcjonalnego łańcucha wywołań dla bezpieczeństwa
-  onCardCounterClick?.(card.id); 
- };
- 
- // DEDYKOWANA LOGIKA KLIKNIĘCIA DLA STATYSTYK (P/T)
- const handleStatsIncrement = () => {
-  onCardStatsClick?.(card.id);
- };
- 
- return (
-  <div
-   className={`card-container ${colorClass} ${from === "hand" ? "hand-card" : ""}`}
-   draggable={from === "hand"}
-   style={{ transform: `scale(${scaleFactor})` }}
-   onDragStart={(e) => {
-    if (from === "hand") {
-      e.dataTransfer.setData("cardId", card.id);
-      e.dataTransfer.setData("from", from);
+  // DEDYKOWANA LOGIKA KLIKNIĘCIA DLA LICZNIKÓW (+1)
+  const handleCounterIncrement = () => {
+    // Używamy opcjonalnego łańcucha wywołań dla bezpieczeństwa
+    onCardCounterClick?.(card.id);
+  };
 
-      const rect = e.currentTarget.getBoundingClientRect();
-      const offsetX = e.clientX - rect.left;
-      const offsetY = e.clientY - rect.top;
-      e.dataTransfer.setData("offsetX", offsetX.toString());
-      e.dataTransfer.setData("offsetY", offsetY.toString());
+  // DEDYKOWANA LOGIKA KLIKNIĘCIA DLA STATYSTYK (P/T)
+  const handleStatsIncrement = () => {
+    onCardStatsClick?.(card.id);
+  };
 
-      const dragImg = e.currentTarget.cloneNode(true) as HTMLElement;
-      dragImg.style.position = "absolute";
-      dragImg.style.top = "-9999px";
-      dragImg.style.transform = "none";
-      document.body.appendChild(dragImg);
+  return (
+    <div
+      className={`card-container ${colorClass} ${from === "hand" ? "hand-card" : ""}`}
+      draggable={from === "hand"}
+      style={{ transform: `scale(${scaleFactor})` }}
+      onDragStart={(e) => {
+        if (from === "hand") {
+          e.dataTransfer.setData("cardId", card.id);
+          e.dataTransfer.setData("from", from);
 
-      e.dataTransfer.setDragImage(dragImg, offsetX, offsetY);
+          const rect = e.currentTarget.getBoundingClientRect();
+          const offsetX = e.clientX - rect.left;
+          const offsetY = e.clientY - rect.top;
+          e.dataTransfer.setData("offsetX", offsetX.toString());
+          e.dataTransfer.setData("offsetY", offsetY.toString());
 
-      setTimeout(() => document.body.removeChild(dragImg), 0);
-    }
-   }}
-  >
-   
-   {/* Wskaźnik ManaCost (PRAWY GÓRNY) */}
-   {from === "hand" && card.mana_cost && (
-    <div className="mana-indicator">
-     <ManaCost manaCost={card.mana_cost} />
+          const dragImg = e.currentTarget.cloneNode(true) as HTMLElement;
+          dragImg.style.position = "absolute";
+          dragImg.style.top = "-9999px";
+          dragImg.style.transform = "none";
+          document.body.appendChild(dragImg);
+
+          e.dataTransfer.setDragImage(dragImg, offsetX, offsetY);
+
+          setTimeout(() => document.body.removeChild(dragImg), 0);
+        }
+      }}
+    >
+
+      {/* Wskaźnik ManaCost (PRAWY GÓRNY) */}
+      {from === "hand" && card.mana_cost && (
+        <div className="mana-indicator">
+          <ManaCost manaCost={card.mana_cost} />
+        </div>
+      )}
+
+      {/* Wskaźnik siły/wytrzymałości (PRAWY DÓŁ) */}
+      {from === "battlefield" && cardOnField && card.basePower !== null && card.baseToughness !== null && (
+        <div className="card-stats-indicator">
+          <CardStats
+            basePower={card.basePower}
+            baseToughness={card.baseToughness}
+            currentPower={cardOnField.stats.power}
+            currentToughness={cardOnField.stats.toughness}
+            onIncrement={handleStatsIncrement} // Użycie dedykowanej funkcji
+            playerColorClass={colorClass}
+          />
+        </div>
+      )}
+
+      {/* Wskaźnik liczników (LEWY DÓŁ) */}
+      {from === "battlefield" && cardOnField && (
+        <div className="card-counters-indicator">
+          <CardCounters
+            counters={cardOnField.counters}
+            onIncrement={handleCounterIncrement} // Użycie dedykowanej funkcji
+            playerColorClass={colorClass}
+          />
+        </div>
+      )}
+
+      {/* Obraz karty / Placeholder */}
+      <div className="card-image-wrapper">
+        {card.image ? (
+          <img src={card.image} alt={card.name} className="card-image" />
+        ) : (
+          <div className="card-placeholder">{card.name}</div>
+        )}
+      </div>
     </div>
-   )}
-   
-   {/* Wskaźnik siły/wytrzymałości (PRAWY DÓŁ) */}
-   {from === "battlefield" && cardOnField && card.basePower !== null && card.baseToughness !== null && (
-    <div className="card-stats-indicator">
-     <CardStats
-      basePower={card.basePower}
-      baseToughness={card.baseToughness}
-      currentPower={cardOnField.stats.power}
-      currentToughness={cardOnField.stats.toughness}
-      onIncrement={handleStatsIncrement} // Użycie dedykowanej funkcji
-      playerColorClass={colorClass}
-     />
-    </div>
-   )}
-   
- {/* Wskaźnik liczników (LEWY DÓŁ) */}
-   {from === "battlefield" && cardOnField &&  (
-    <div className="card-counters-indicator">
-     <CardCounters
-      counters={cardOnField.counters}
-      onIncrement={handleCounterIncrement} // Użycie dedykowanej funkcji
-      playerColorClass={colorClass}
-     />
-    </div>
-   )}
-   
-   {/* Obraz karty / Placeholder */}
-   <div className="card-image-wrapper">
-    {card.image ? (
-     <img src={card.image} alt={card.name} className="card-image" />
-    ) : (
-     <div className="card-placeholder">{card.name}</div>
-    )}
-   </div>
-  </div>
- );
+  );
 }

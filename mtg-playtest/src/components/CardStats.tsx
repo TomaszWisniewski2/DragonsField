@@ -25,7 +25,7 @@ const CardStats: React.FC<CardStatsProps> = ({
         e.stopPropagation();
         onIncrement();
     };
-    
+
     const handleDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
         e.stopPropagation();
     };

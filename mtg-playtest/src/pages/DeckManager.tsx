@@ -46,7 +46,7 @@ interface ScryfallCardData {
 function mapScryfallDataToCardType(data: ScryfallCardData): CardType {
     // 1. Bezpieczne sprawdzenie, czy karta jest DFC
     const isDfc = data.card_faces && data.card_faces.length === 2;
-    
+
     // 2. Bezpieczne przypisanie stron (używamy operatora '!' tylko po sprawdzeniu isDfc)
     const primaryFace = isDfc ? data.card_faces![0] : data;
     const secondFace = isDfc ? data.card_faces![1] : undefined;
@@ -63,7 +63,7 @@ function mapScryfallDataToCardType(data: ScryfallCardData): CardType {
     return {
         id: data.id,
         // Używamy nazwy pierwszej strony dla głównej nazwy karty w Twoim obiekcie CardType
-        name: primaryFace.name, 
+        name: primaryFace.name,
         image: primaryImage || undefined,
         mana_cost: primaryFace.mana_cost,
         type_line: primaryFace.type_line,
@@ -115,7 +115,7 @@ export default function DeckManager() {
         try {
             // Dane zwracane przez Scryfall API
             const data: ScryfallCardData = await getCardByName(query.trim());
-            
+
             // Używamy nowej funkcji mapującej
             const card: CardType = mapScryfallDataToCardType(data);
 
@@ -168,10 +168,10 @@ export default function DeckManager() {
 
                 // Dane zwracane przez Scryfall API
                 const data: ScryfallCardData = await getCardByName(name);
-                
+
                 // Używamy nowej funkcji mapującej
                 const card: CardType = mapScryfallDataToCardType(data);
-                
+
                 // Sprawdzamy typ linii karty (pierwszej strony)
                 if (card.type_line?.includes("Legendary Creature") && !newCommander) {
                     newCommander = card;
@@ -182,7 +182,7 @@ export default function DeckManager() {
                     newDeck.push({ ...card, id: `${card.id}-${i}-${Date.now()}` });
                 }
             }
-            
+
             setDeck(newDeck);
             setCommander(newCommander);
             localStorage.setItem("currentDeck", JSON.stringify(newDeck));
@@ -244,16 +244,16 @@ export default function DeckManager() {
             >
                 Importuj talię
             </button>
-            
+
             {/* Wyświetlanie informacji o commanderze */}
             {commander && (
                 <div style={{ marginTop: "20px", padding: "10px", border: "2px solid gold", borderRadius: "8px", display: 'flex', alignItems: 'center', gap: '10px' }}>
                     {/* Nowość: Obrazek commandera */}
                     {commander.image && (
-                        <img 
-                            src={commander.image} 
-                            alt={commander.name} 
-                            style={{ width: '60px', borderRadius: '4px' }} 
+                        <img
+                            src={commander.image}
+                            alt={commander.name}
+                            style={{ width: '60px', borderRadius: '4px' }}
                         />
                     )}
                     <h3 style={{ margin: 0 }}>Commander: {commander.name}</h3>

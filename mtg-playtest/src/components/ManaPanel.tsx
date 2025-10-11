@@ -25,7 +25,7 @@ const ManaPanel: React.FC<ManaPanelProps> = ({ manaPool, onManaChange, isOwnedPl
       {manaColors.map((color, index) => (
         <div key={color} className="mana-column">
           {/* Zamieniono <span> na <button> */}
-          <button 
+          <button
             className={`mana mana-${color.toLowerCase()}`}
             onClick={() => isOwnedPlayer && onManaChange(color, 1)}
             disabled={!isOwnedPlayer} // Dodano atrybut 'disabled'
