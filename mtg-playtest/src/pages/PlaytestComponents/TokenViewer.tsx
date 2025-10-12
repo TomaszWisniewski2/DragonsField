@@ -20,14 +20,11 @@ export default function TokenViewer({
     playerColorClass,
     onCreateToken, // PRZYWRÓCONY PROP
 }: TokenViewerProps) {
-    const [hoveredTokenImage, setHoveredTokenImage] = useState<string | null>(
-        allAvailableTokens.length > 0 ? allAvailableTokens[0].image || null : null
-    );
     const [filterText, setFilterText] = useState("");
     const dragImageRef = useRef<HTMLImageElement>(null);
 
     // ----------------------------------------------------------------------
-    // LOGIKA FILTROWANIA
+    // LOGIKA FILTROWANIA i SORTOWANIA (Musi być przed inicjalizacją stanu podglądu)
     // ----------------------------------------------------------------------
     const filteredTokens = allAvailableTokens
         .filter(token => 
@@ -37,6 +34,12 @@ export default function TokenViewer({
         // Sortowanie alfabetyczne dla porządku (jak w LibraryViewer)
         .sort((a, b) => a.name.localeCompare(b.name));
     // ----------------------------------------------------------------------
+    
+    // ZMIANA: Inicjalizacja stanu podglądu odbywa się na podstawie 
+    // POSORTOWANEJ i PRZEFILTROWANEJ listy, aby była spójna z listą renderowaną.
+    const [hoveredTokenImage, setHoveredTokenImage] = useState<string | null>(
+        filteredTokens.length > 0 ? filteredTokens[0].image || null : null
+    );
 
     return (
         <div className={`library-viewer-overlay ${playerColorClass}`}>

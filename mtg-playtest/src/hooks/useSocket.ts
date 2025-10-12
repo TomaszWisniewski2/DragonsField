@@ -48,24 +48,45 @@ export const useSocket = (serverUrl: string) => {
       console.log("Rozłączono z serwerem Socket.io");
     });
 
-    socket.on("updateState", (updatedSession: Session) => {
-      setSession(updatedSession);
-      console.log("Otrzymano aktualizację stanu sesji");
-            // --- LOGIKA ZBIERANIA UNIKALNYCH TOKENÓW (NA WYŚWIETLANIE) ---
-      const playerTokens = updatedSession.players.find(p => p.id === socket.id)?.initialDeck
-          .flatMap(card => card.tokens || [])
-          .filter((token, index, self) => 
-              // Filtrowanie, aby zachować tylko unikalne tokeny
-              index === self.findIndex((t) => (
-                  t.name === token.name && 
-                  t.basePower === token.basePower && 
-                  t.baseToughness === token.baseToughness
-              ))
-          ) || [];
-      // Ustawienie listy dostępnych tokenów dla komponentu TokenViewer
-      setAllAvailableTokens(playerTokens);
-      // -----------------------------------------------------------------
-    });
+  socket.on("updateState", (updatedSession: Session) => {
+   setSession(updatedSession);
+   console.log("Otrzymano aktualizację stanu sesji");
+      // --- LOGIKA ZBIERANIA UNIKALNYCH TOKENÓW (NA WYŚWIETLANIE) ---
+   
+   // 1. Zbieranie tokenów z kart gracza
+   const tokensFromDeck = updatedSession.players.find(p => p.id === socket.id)?.initialDeck
+     .flatMap(card => card.tokens || []) || [];
+   
+   // 2. Zbieranie tokenów z globalnego localStorage (tokenList)
+   let tokensFromLocalStorage: TokenData[] = [];
+   try {
+    const savedTokens = localStorage.getItem("tokenList");
+    if (savedTokens) {
+     tokensFromLocalStorage = JSON.parse(savedTokens) as TokenData[];
+    }
+   } catch (e) {
+    console.error("Błąd parsowania tokenList z localStorage:", e);
+    // Kontynuujemy, używając tylko tokenów z talii
+   }
+
+   // 3. Łączenie i usuwanie duplikatów
+   const allTokens = [...tokensFromDeck, ...tokensFromLocalStorage];
+   
+   const uniqueTokens = allTokens
+     .filter((token, index, self) => 
+       // Filtrowanie, aby zachować tylko unikalne tokeny
+       index === self.findIndex((t) => (
+         // Używamy kombinacji nazwy, mocy i wytrzymałości jako klucza unikalności
+         t.name === token.name && 
+         t.basePower === token.basePower && 
+         t.baseToughness === token.baseToughness
+       ))
+     );
+
+   // Ustawienie listy dostępnych tokenów dla komponentu TokenViewer
+   setAllAvailableTokens(uniqueTokens);
+   // -----------------------------------------------------------------
+  });
 
      // --- NOWA FUNKCJA DO TWORZENIA TOKENÓW NA POLU BITWY ---
 
