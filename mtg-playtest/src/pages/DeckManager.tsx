@@ -1,20 +1,32 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 // Zakładam, że w pliku api/scryfall.ts masz funkcje:
 // getCardByName(name: string): Promise<ScryfallCardData>
 // getCardImageUrl(data: ScryfallCardData): string | null
-import { getCardByName, getCardImageUrl } from "../api/scryfall";
+// ORAZ NOWĄ: getCardByURI(uri: string): Promise<ScryfallCardData>
+import { getCardByName, getCardImageUrl, getCardByURI } from "../api/scryfall"; 
 import "./DeckManager.css";
-import type { CardType } from "../components/types";
+// Importujemy TokenData z pliku types
+import type { CardType, TokenData } from "../components/types"; 
 
-// Wymaga zdefiniowania oczekiwanej struktury danych ze Scryfall, 
-// przynajmniej w minimalnym zakresie potrzebnym do pobierania.
-// Ta struktura jest uproszczona i nie jest pełną definicją Scryfall API.
-// Powinieneś mieć ten typ w pliku `../api/scryfall.ts` lub podobnym.
-// Na potrzeby tego przykładu, zakładam że wygląda to mniej więcej tak:
+// ----------------------------------------------------------------------
+// 1. DEFINICJE INTERFEJSÓW (Pozostawione bez zmian)
+// ----------------------------------------------------------------------
+
+// Interfejs dla powiązanych części (tokeny, meld, itp.)
+interface ScryfallRelatedPart {
+    object: string; 
+    id: string;
+    component: string; // 'token' jest kluczowy
+    name: string;
+    type_line: string;
+    uri: string; // URI do pobrania pełnych danych tokenu
+}
+
 interface ScryfallCardFace {
     name: string;
     mana_cost: string;
     type_line: string;
+    cmc: number; 
     power?: string;
     toughness?: string;
     loyalty?: number;
@@ -28,6 +40,7 @@ interface ScryfallCardData {
     name: string;
     mana_cost?: string;
     type_line?: string;
+    cmc: number; 
     power?: string;
     toughness?: string;
     loyalty?: number;
@@ -35,48 +48,89 @@ interface ScryfallCardData {
     image_uris?: {
         normal: string;
     };
-    // NOWOŚĆ: Pole dla kart DFC
     card_faces?: ScryfallCardFace[];
+    all_parts?: ScryfallRelatedPart[]; 
 }
 
+// ----------------------------------------------------------------------
+// 2. FUNKCJE POMOCNICZE (Pozostawione bez zmian, znajdują się poza komponentem)
+// ----------------------------------------------------------------------
+
 /**
- * Funkcja pomocnicza do pobierania danych karty z pojedynczej strony
- * (albo głównej strony, albo strony z card_faces)
+ * Asynchroniczna funkcja do pobierania szczegółowych danych tokenów 
+ * na podstawie URI z pola all_parts.
  */
-function mapScryfallDataToCardType(data: ScryfallCardData): CardType {
-    // 1. Bezpieczne sprawdzenie, czy karta jest DFC
+async function getTokensData(data: ScryfallCardData): Promise<TokenData[] | undefined> {
+    if (!data.all_parts) return undefined;
+
+    const tokenUris = data.all_parts
+        .filter(part => part.component === 'token')
+        .map(token => token.uri);
+
+    if (tokenUris.length === 0) return undefined;
+
+    try {
+        // Pobieramy dane dla wszystkich tokenów równolegle
+        const tokenDataPromises = tokenUris.map(uri => getCardByURI(uri));
+        const rawTokensData = await Promise.all(tokenDataPromises);
+
+        // Mapujemy surowe dane Scryfall na nasz interfejs TokenData
+        const tokens: TokenData[] = rawTokensData.map(tokenData => ({
+            name: tokenData.name,
+            type_line: tokenData.type_line || '',
+            basePower: (tokenData.power === "*" ? "0" : tokenData.power) || null,
+            baseToughness: (tokenData.toughness === "*" ? "0" : tokenData.toughness) || null,
+            image: getCardImageUrl(tokenData) || undefined,
+            mana_value: tokenData.cmc,
+            mana_cost: tokenData.mana_cost,
+        }));
+
+        return tokens;
+    } catch (error) {
+        console.error("Błąd podczas pobierania danych tokenów:", error);
+        return undefined; // Zwracamy undefined w razie błędu
+    }
+}
+
+
+/**
+ * Funkcja mapująca dane karty Scryfall na CardType, przyjmująca opcjonalne, 
+ * już pobrane, dane tokenów. (Pozostawiona bez zmian)
+ */
+function mapScryfallDataToCardType(data: ScryfallCardData, tokens?: TokenData[]): CardType {
     const isDfc = data.card_faces && data.card_faces.length === 2;
 
-    // 2. Bezpieczne przypisanie stron (używamy operatora '!' tylko po sprawdzeniu isDfc)
     const primaryFace = isDfc ? data.card_faces![0] : data;
     const secondFace = isDfc ? data.card_faces![1] : undefined;
 
-    // Pobieranie obrazka dla pierwszej strony
-    // Używamy opcjonalnego łańcuchowania (?.), aby bezpiecznie uzyskać obrazek
     const primaryImage = isDfc ? primaryFace.image_uris?.normal : getCardImageUrl(data);
     const primaryLoyalty = primaryFace.type_line?.includes("Planeswalker") ? primaryFace.loyalty : null;
 
-    // Dane dla drugiej strony (jeśli istnieje)
     const secondImage = secondFace?.image_uris?.normal;
     const secondLoyalty = secondFace?.type_line?.includes("Planeswalker") ? secondFace.loyalty : null;
 
+    const primaryManaValue = primaryFace.cmc || data.cmc; 
+    const secondManaValue = secondFace?.cmc;
+
     return {
         id: data.id,
-        // Używamy nazwy pierwszej strony dla głównej nazwy karty w Twoim obiekcie CardType
         name: primaryFace.name,
         image: primaryImage || undefined,
         mana_cost: primaryFace.mana_cost,
+        mana_value: primaryManaValue, 
         type_line: primaryFace.type_line,
-        // DFC data.power/toughness są na stronach, non-DFC są na obiekcie głównym (data)
         basePower: (primaryFace.power === "*" ? "0" : primaryFace.power) || null,
         baseToughness: (primaryFace.toughness === "*" ? "0" : primaryFace.toughness) || null,
         loyalty: primaryLoyalty,
+        
+        // Zapisujemy powiązane tokeny bezpośrednio na karcie
+        tokens: tokens, 
 
-        // Dane DFC
         hasSecondFace: isDfc,
         secondFaceName: secondFace?.name,
         secondFaceImage: secondImage,
         secondFaceManaCost: secondFace?.mana_cost,
+        secondFaceManaValue: secondManaValue, 
         secondFaceTypeLine: secondFace?.type_line,
         secondFaceBasePower: (secondFace?.power === "*" ? "0" : secondFace?.power) || null,
         secondFaceBaseToughness: (secondFace?.toughness === "*" ? "0" : secondFace?.toughness) || null,
@@ -84,6 +138,10 @@ function mapScryfallDataToCardType(data: ScryfallCardData): CardType {
     };
 }
 
+
+// ----------------------------------------------------------------------
+// 3. KOMPONENT DECKMANAGER
+// ----------------------------------------------------------------------
 export default function DeckManager() {
     const [query, setQuery] = useState("");
     const [deck, setDeck] = useState<CardType[]>(
@@ -106,18 +164,80 @@ export default function DeckManager() {
             }
         }
     );
+    // NOWY STAN: Lista unikalnych tokenów w całej talii
+    const [tokenList, setTokenList] = useState<TokenData[]>(
+        () => {
+            try {
+                const savedTokens = localStorage.getItem("tokenList");
+                return savedTokens ? JSON.parse(savedTokens) : [];
+            } catch {
+                return [];
+            }
+        }
+    );
     const [loading, setLoading] = useState(false);
     const [bulkText, setBulkText] = useState("");
 
+    // Użyj useEffect do aktualizacji localStorage dla tokenList, gdy się zmieni
+    useEffect(() => {
+        localStorage.setItem("tokenList", JSON.stringify(tokenList));
+    }, [tokenList]);
+
+    /**
+     * Funkcja aktualizująca globalną listę tokenów.
+     * Zapobiega duplikatom po nazwie tokenu.
+     * Używa setTokenList, więc nie musi być w useCallback.
+     */
+    const updateTokenList = (newTokens: TokenData[] | undefined) => {
+        if (!newTokens || newTokens.length === 0) return;
+
+        setTokenList(prevList => {
+            const currentTokenNames = new Set(prevList.map(t => t.name));
+            const uniqueNewTokens = newTokens.filter(token => !currentTokenNames.has(token.name));
+            
+            if (uniqueNewTokens.length > 0) {
+                return [...prevList, ...uniqueNewTokens];
+            }
+            return prevList;
+        });
+    };
+
+    /**
+     * Funkcja do czyszczenia listy tokenów i ponownego skanowania talii.
+     * Zdefiniowana za pomocą useCallback, aby była stabilna.
+     * Ma zależności: deck i setTokenList.
+     */
+    const recomputeTokenList = useCallback(() => {
+        const uniqueTokensMap = new Map<string, TokenData>();
+
+        deck.forEach(card => {
+            card.tokens?.forEach(token => {
+                if (!uniqueTokensMap.has(token.name)) {
+                    uniqueTokensMap.set(token.name, token);
+                }
+            });
+        });
+        setTokenList(Array.from(uniqueTokensMap.values()));
+    }, [deck, setTokenList]); // Dodano deck i setTokenList jako zależności!
+
+    const calculateTotalManaValue = (): number => {
+        return deck.reduce((sum, card) => sum + (card.mana_value || 0), 0);
+    };
+
+    /**
+     * Zmodyfikowano do pobierania szczegółów tokenów ORAZ aktualizacji tokenList
+     */
     async function handleAddCard() {
         if (!query.trim()) return;
         setLoading(true);
         try {
-            // Dane zwracane przez Scryfall API
             const data: ScryfallCardData = await getCardByName(query.trim());
+            
+            const tokens = await getTokensData(data); 
+            const card: CardType = mapScryfallDataToCardType(data, tokens);
 
-            // Używamy nowej funkcji mapującej
-            const card: CardType = mapScryfallDataToCardType(data);
+            // AKTUALIZACJA GLOBALNEJ LISTY TOKENÓW
+            updateTokenList(tokens);
 
             const newDeck = [...deck, card];
             setDeck(newDeck);
@@ -139,7 +259,17 @@ export default function DeckManager() {
         const newDeck = deck.filter((c) => c.id !== id);
         setDeck(newDeck);
         localStorage.setItem("currentDeck", JSON.stringify(newDeck));
+        
+        // Funkcja recomputeTokenList zostanie automatycznie wywołana
+        // przez useEffect poniżej, kiedy zmieni się stan deck.
     }
+    
+    // Użyj useEffect do ponownego przeliczenia tokenów po zmianie decku
+    // Teraz recomputeTokenList jest stabilne i nie musi być w zależnościach
+    useEffect(() => {
+        recomputeTokenList();
+    }, [deck, recomputeTokenList]); // Dodano recomputeTokenList jako zależność (jest to dobra praktyka)
+
 
     function handleSetCommander(card: CardType) {
         setCommander(card);
@@ -151,37 +281,51 @@ export default function DeckManager() {
         localStorage.removeItem("commander");
     }
 
+    /**
+     * Zmodyfikowano do pobierania szczegółów tokenów i aktualizacji tokenList
+     */
     async function handleBulkImport() {
         const lines = bulkText.split("\n").map((l) => l.trim()).filter(Boolean);
         const newDeck: CardType[] = [];
+        const bulkTokens: TokenData[] = [];
         let newCommander: CardType | null = null;
+        const uniqueTokenNamesInBulk = new Set<string>();
 
         setLoading(true);
         try {
             for (const line of lines) {
-                // ... (reszta logiki parsowania jest bez zmian)
                 const match = line.match(/^(\d+)\s+([^(]+)(?:\s+\(.*\))?/);
                 if (!match) continue;
 
                 const count = parseInt(match[1], 10);
                 const name = match[2].trim();
 
-                // Dane zwracane przez Scryfall API
                 const data: ScryfallCardData = await getCardByName(name);
+                
+                const tokens = await getTokensData(data);
+                const card: CardType = mapScryfallDataToCardType(data, tokens);
 
-                // Używamy nowej funkcji mapującej
-                const card: CardType = mapScryfallDataToCardType(data);
+                // Zbieranie unikalnych tokenów podczas importu
+                if (tokens) {
+                    tokens.forEach(token => {
+                        if (!uniqueTokenNamesInBulk.has(token.name)) {
+                            uniqueTokenNamesInBulk.add(token.name);
+                            bulkTokens.push(token);
+                        }
+                    });
+                }
 
-                // Sprawdzamy typ linii karty (pierwszej strony)
                 if (card.type_line?.includes("Legendary Creature") && !newCommander) {
                     newCommander = card;
                 }
 
                 for (let i = 0; i < count; i++) {
-                    // Generujemy unikalne ID dla każdej kopii karty
                     newDeck.push({ ...card, id: `${card.id}-${i}-${Date.now()}` });
                 }
             }
+            
+            // AKTUALIZACJA GLOBALNEJ LISTY TOKENÓW Z PAKIETU
+            updateTokenList(bulkTokens);
 
             setDeck(newDeck);
             setCommander(newCommander);
@@ -198,13 +342,16 @@ export default function DeckManager() {
             setLoading(false);
         }
     }
+    
+    const totalManaValue = calculateTotalManaValue();
 
     return (
         <div className="deck-manager-container">
             <h1>Deck Manager</h1>
             <p>Dodawaj karty do swojej talii:</p>
 
-            {/* input do pojedynczej karty */}
+            {/* Inputy do dodawania kart */}
+            {/* ... (kod inputów) ... */}
             <div style={{ marginBottom: "10px" }}>
                 <input
                     type="text"
@@ -229,7 +376,7 @@ export default function DeckManager() {
                 </button>
             </div>
 
-            {/* import całego decku */}
+            {/* Import całego decku */}
             <h2>Import całej talii</h2>
             <textarea
                 value={bulkText}
@@ -248,7 +395,6 @@ export default function DeckManager() {
             {/* Wyświetlanie informacji o commanderze */}
             {commander && (
                 <div style={{ marginTop: "20px", padding: "10px", border: "2px solid gold", borderRadius: "8px", display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    {/* Nowość: Obrazek commandera */}
                     {commander.image && (
                         <img
                             src={commander.image}
@@ -262,9 +408,40 @@ export default function DeckManager() {
                     </button>
                 </div>
             )}
+            
+            {/* GLOBALNA LISTA TOKENÓW */}
+            <h2 style={{ marginTop: "20px" }}>Lista tokenów do gry ({tokenList.length}) 🎲</h2>
+            <div className="token-list" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center', padding: '10px', backgroundColor: '#222', borderRadius: '8px' }}>
+                {tokenList.length === 0 ? (
+                    <p style={{ color: '#ccc' }}>Brak tokenów związanych z kartami w talii.</p>
+                ) : (
+                    tokenList.map((token) => (
+                        <div key={token.name} style={{ width: '100px', textAlign: 'center', padding: '5px', border: '1px solid #444', borderRadius: '4px', backgroundColor: '#333' }}>
+                            {token.image && (
+                                <img 
+                                    src={token.image} 
+                                    alt={token.name} 
+                                    style={{ width: '100%', height: 'auto', borderRadius: '4px', marginBottom: '4px' }}
+                                />
+                            )}
+                            <div style={{ fontWeight: 'bold', fontSize: '0.9em' }}>{token.name}</div>
+                            <div style={{ fontSize: '0.7em', color: '#aaa' }}>{token.type_line}</div>
+                            {token.basePower !== null && token.baseToughness !== null && (
+                                <div style={{ color: 'lightcoral', fontSize: '0.8em' }}>{token.basePower}/{token.baseToughness}</div>
+                            )}
+                        </div>
+                    ))
+                )}
+            </div>
+            {/* KONIEC GLOBALNEJ LISTY TOKENÓW */}
+            
+            <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid #444' }} />
 
             {/* lista kart w talii */}
             <h2 style={{ marginTop: "20px" }}>Twoja talia ({deck.length} kart)</h2>
+            <p style={{ fontWeight: 'bold' }}>
+                Całkowity Mana Value talii: {totalManaValue.toFixed(2)}
+            </p>
             <div className="deck-list">
                 {deck.map((card) => (
                     <div
@@ -291,6 +468,22 @@ export default function DeckManager() {
                                 Karta dwustronna
                             </p>
                         )}
+                        
+                        {/* WYŚWIETLANIE SZCZEGÓŁÓW TOKENÓW ZWIĄZANYCH Z TĄ KARTĄ */}
+                        {card.tokens && card.tokens.length > 0 && (
+                            <div style={{ margin: '4px 0', fontSize: '0.7em', color: 'yellowgreen', borderTop: '1px solid #333', paddingTop: '4px' }}>
+                                **Tokeny tej karty:**
+                                {card.tokens.map((token: TokenData, index) => (
+                                    <div key={index} style={{ margin: '0', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                        <div style={{ fontWeight: 'bold' }}>{token.name}</div>
+                                        {token.basePower !== null && token.baseToughness !== null && (
+                                            <div style={{ color: 'lightcoral', fontSize: '0.8em' }}>{token.basePower}/{token.baseToughness}</div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
                             <button
                                 onClick={() => handleRemoveCard(card.id)}
@@ -320,6 +513,9 @@ export default function DeckManager() {
                     </div>
                 ))}
             </div>
+
+
+            
         </div>
     );
 }

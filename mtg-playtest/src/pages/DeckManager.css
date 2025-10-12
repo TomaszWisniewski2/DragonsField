@@ -1,3 +1,23 @@
+body, #root, html {
+    margin: 0;
+    padding: 0;
+    /* Ustawienie minimalnej wysokości na cały widoczny obszar */
+    min-height: 100vh; 
+    /* Upewnij się, że przewijanie działa na poziomie okna */
+    overflow-y: auto; 
+}
+
+/* W komponencie DeckManager używasz kontenera o klasie .deck-manager-container, 
+ * upewnij się, że może on rosnąć w pionie. 
+ * Dodaj ewentualne style, jeśli ten kontener ma ograniczać przewijanie:
+ */
+.deck-manager-container {
+    padding: 20px; /* Dodaj padding dla estetyki */
+    min-height: 100vh; /* Zapewnij, że kontener też może rosnąć */
+    /* Reszta twoich stylów dla kontenera... */
+}
+
+/* Istniejący kod CSS z twojego przykładu */
 .deck-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -5,10 +25,11 @@
   padding: 10px;
   border-radius: 8px;
   background-color: #333;
-  min-height: 200px; /* Minimalna wysokość, aby pojawił się scrollbar */
-  max-height: 400px; /* Maksymalna wysokość, po której następuje przewijanie */
-  overflow-y: scroll; /* Włącza przewijanie wertykalne */
-  height: 40vh;
+  /* Te właściwości kontrolują PRZEWIJANIE TYLKO W OBRĘBIE listy kart */
+  min-height: 250px; 
+  max-height: 600px; 
+  overflow-y: scroll; 
+  
 }
 
 .deck-list > div {

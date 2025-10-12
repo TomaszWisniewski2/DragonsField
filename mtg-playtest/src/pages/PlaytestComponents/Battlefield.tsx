@@ -2,7 +2,7 @@
 
 import React, { type DragEvent, useState, useEffect, type MouseEvent, useRef } from "react";
 // Upewnij się, że CardOnField i CardType są poprawnie zaimportowane
-import type { Player, CardOnField, Zone, CardType } from "../../components/types";
+import type { Player, CardOnField, Zone, CardType, TokenData } from "../../components/types";
 import Card from "../../components/Card";
 import "./../Playtest.css";
 
@@ -47,6 +47,7 @@ interface BattlefieldProps {
   // FUNKCJA USTAWIAJĄCA STATYSTYKI
   setCardStats: (code: string, playerId: string, cardId: string, powerValue: number, toughnessValue: number) => void;
   flipCard: (code: string, playerId: string, cardId: string) => void;
+  onCreateToken: (tokenData: TokenData) => void;
 }
 
 export default function Battlefield({
@@ -73,6 +74,7 @@ export default function Battlefield({
   setCardStats,
   rotateCard180,
   flipCard,
+  onCreateToken,
 }: BattlefieldProps) {
   const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
@@ -304,7 +306,27 @@ export default function Battlefield({
     e.preventDefault();
     if (!battlefieldRef.current) return;
     const dropZoneRect = battlefieldRef.current.getBoundingClientRect();
-
+    const isToken = e.dataTransfer.getData("isToken");
+    const from = e.dataTransfer.getData("from") as Zone | "token"; // Zmieniono typ na "token"
+      // ----------------------------------------------------
+  // 1. OBSŁUGA UPUSZCZENIA TOKENU Z TokenViewer
+  // ----------------------------------------------------
+  if (isToken === "true" && from === "token") {
+   const tokenDataString = e.dataTransfer.getData("tokenData");
+   if (tokenDataString) {
+    try {
+     const tokenData: TokenData = JSON.parse(tokenDataString);
+     // Wywołujemy funkcję tworzącą token na serwerze.
+     // Ponieważ onCreateToken nie przyjmuje x/y, token utworzy się na
+     // domyślnej pozycji (100, 100), a gracz będzie musiał go przesunąć.
+     onCreateToken(tokenData); 
+     return; // Kończymy obsługę upuszczenia
+    } catch (error) {
+     console.error("Błąd parsowania danych tokenu:", error);
+     return;
+    }
+   }
+  }
     const baseCardWidth = 150;
     const baseCardHeight = 210;
 

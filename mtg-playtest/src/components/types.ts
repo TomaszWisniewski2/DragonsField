@@ -16,22 +16,35 @@ export interface CardType {
   name: string;
   image?: string;
   mana_cost?: string;
+  mana_value: number;
   type_line?: string;
   basePower?: string | null;
   baseToughness?: string | null;
   loyalty?: number | null;
 
-  // NOWE POLA DLA DRUGIEJ STRONY KARTY (DFC)
+
   hasSecondFace?: boolean; // Flaga ułatwiająca sprawdzenie, czy karta ma drugą stronę
   secondFaceName?: string;
   secondFaceImage?: string;
   secondFaceManaCost?: string;
+  secondFaceManaValue?: number;
   secondFaceTypeLine?: string;
   secondFaceBasePower?: string | null;
   secondFaceBaseToughness?: string | null;
   secondFaceLoyalty?: number | null;
+
+  tokens?: TokenData[]; 
 }
 
+export interface TokenData {
+    name: string;
+    type_line: string;
+    basePower?: string | null;
+    baseToughness?: string | null;
+    image?: string;
+    mana_value: number; 
+    mana_cost?: string;
+}
 export interface CardOnField {
   id: string;
   card: CardType;

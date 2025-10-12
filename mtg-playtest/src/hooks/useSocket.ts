@@ -10,6 +10,7 @@ import type {
   Zone,
   SessionType,
   SortCriteria,
+  TokenData,
 } from "../components/types";
 
 export interface SessionStats {
@@ -23,6 +24,7 @@ export const useSocket = (serverUrl: string) => {
   const [session, setSession] = useState<Session | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [allSessionStats, setAllSessionStats] = useState<SessionStats>({});
+  const [allAvailableTokens, setAllAvailableTokens] = useState<TokenData[]>([]);
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
@@ -49,7 +51,23 @@ export const useSocket = (serverUrl: string) => {
     socket.on("updateState", (updatedSession: Session) => {
       setSession(updatedSession);
       console.log("Otrzymano aktualizację stanu sesji");
+            // --- LOGIKA ZBIERANIA UNIKALNYCH TOKENÓW (NA WYŚWIETLANIE) ---
+      const playerTokens = updatedSession.players.find(p => p.id === socket.id)?.initialDeck
+          .flatMap(card => card.tokens || [])
+          .filter((token, index, self) => 
+              // Filtrowanie, aby zachować tylko unikalne tokeny
+              index === self.findIndex((t) => (
+                  t.name === token.name && 
+                  t.basePower === token.basePower && 
+                  t.baseToughness === token.baseToughness
+              ))
+          ) || [];
+      // Ustawienie listy dostępnych tokenów dla komponentu TokenViewer
+      setAllAvailableTokens(playerTokens);
+      // -----------------------------------------------------------------
     });
+
+     // --- NOWA FUNKCJA DO TWORZENIA TOKENÓW NA POLU BITWY ---
 
     // NOWE NASŁUCHIWANIE NA STATYSTYKI
     socket.on("updateSessionStats", (stats: SessionStats) => {
@@ -281,6 +299,14 @@ export const useSocket = (serverUrl: string) => {
     [emitEvent]
   );
 
+
+ const createToken = useCallback(
+  (code: string, playerId: string, tokenData: TokenData) => {
+   emitEvent("createToken", { code, playerId, tokenData });
+  },
+  [emitEvent]
+ );
+
   return {
     connected,
     session,
@@ -301,7 +327,6 @@ export const useSocket = (serverUrl: string) => {
     allSessionStats,
     incrementCardCounters,
     decreaseCardCounters,
-    // DODANIE NOWEJ FUNKCJI DO ZWRACANEGO OBIEKTU
     moveAllCards,
     setCardStats,
     rotateCard180,
@@ -309,5 +334,7 @@ export const useSocket = (serverUrl: string) => {
     sortHand,
     moveAllCardsToBottomOfLibrary,
     discardRandomCard,
+    allAvailableTokens,
+    createToken
   };
 };

@@ -11,13 +11,14 @@ import LibraryViewer from "./PlaytestComponents/LibraryViewer";
 import GraveyardViewer from "./PlaytestComponents/GraveyardViewer";
 import ExileViewer from "./PlaytestComponents/ExileViewer";
 import ManaPanel from "../components/ManaPanel";
-import type { CardType, Player } from "../components/types"; // Typy CardType i Player pochodzą stąd
+import type { CardType, Player, TokenData } from "../components/types"; // Typy CardType i Player pochodzą stąd
 import StartGameModal from "../components/StartGameModal";
 import CardPreview from "../components/CardPreview";
 import { Link } from "react-router-dom"; 
 import { useNavigate } from "react-router-dom"; 
 import ResetHandModalComponent from "../components/ResetHandModal";
 import ExitGameModalComponent from "../components/ExitGameModal"
+import TokenViewer from "./PlaytestComponents/TokenViewer";
 
 export default function Playtest() {
 const {
@@ -46,6 +47,8 @@ const {
  sortHand,
  moveAllCardsToBottomOfLibrary,
  discardRandomCard,
+ allAvailableTokens,
+ createToken,
 } = useSocket(import.meta.env.VITE_SERVER_URL || "http://localhost:3001");
 
 const navigate = useNavigate();
@@ -57,6 +60,7 @@ const [shuffleMessage, setShuffleMessage] = useState<string>('');
 const [isLibraryViewerOpen, setIsLibraryViewerOpen] = useState(false);
 const [isGraveyardViewerOpen, setIsGraveyardViewerOpen] = useState(false);
 const [isExileViewerOpen, setIsExileViewerOpen] = useState(false);
+const [isTokenViewerOpen, setIsTokenViewerOpen] = useState(false);
 const [isManaPanelVisible, setIsManaPanelVisible] = useState(false);
 const [isResetHandModalOpen, setIsResetHandModalOpen] = useState(false);
 const [isExitGameModalOpen, setIsExitGameModalOpen] = useState(false);
@@ -127,6 +131,15 @@ const handleManaChange = (color: keyof Player['manaPool'], amount: number) => {
  changeMana(session.code, player.id, color, newManaValue);
  }
 };
+// --- NOWA FUNKCJA WRAPPER DO TWORZENIA TOKENÓW ---
+const handleCreateToken = useCallback((tokenData: TokenData) => {
+ if (player && session) {
+  // Wysłanie żądania utworzenia tokenu do serwera. Serwer zajmie się generowaniem ID i dodaniem do Battlefield
+  createToken(session.code, player.id, tokenData); 
+  // Opcjonalnie: Zamknięcie widoku po stworzeniu tokenu
+  setIsTokenViewerOpen(false); 
+ }
+}, [player, session, createToken]); // createToken musi być w zależnościach
 
 // NOWA FUNKCJA WRAPPER DO PRZENOSZENIA WSZYSTKICH KART
 const handleMoveAllCards = useCallback((from: Zone, to: Zone) => {
@@ -140,18 +153,28 @@ const toggleLibraryViewer = () => {
  setIsLibraryViewerOpen(!isLibraryViewerOpen);
  setIsGraveyardViewerOpen(false);
  setIsExileViewerOpen(false);
+ setIsTokenViewerOpen(false);
 };
 
 const toggleGraveyardViewer = () => {
  setIsGraveyardViewerOpen(!isGraveyardViewerOpen);
  setIsLibraryViewerOpen(false);
  setIsExileViewerOpen(false);
+ setIsTokenViewerOpen(false);
 };
 
 const toggleExileViewer = () => {
  setIsExileViewerOpen(!isExileViewerOpen);
  setIsGraveyardViewerOpen(false);
  setIsLibraryViewerOpen(false);
+ setIsTokenViewerOpen(false);
+};
+
+const toggleTokenViewer = () => {
+ setIsTokenViewerOpen(!isTokenViewerOpen);
+ setIsGraveyardViewerOpen(false);
+ setIsLibraryViewerOpen(false);
+ setIsExileViewerOpen(false);
 };
 
 const toggleManaPanel = useCallback(() => {
@@ -378,6 +401,7 @@ return (
   setCardStats={setCardStats} // <--- PRZEKAZANIE NOWEJ FUNKCJI DO BATTLEFIELD
   rotateCard180={rotateCard180}
   flipCard={flipCard} 
+  onCreateToken={handleCreateToken} 
  />
  <Sidebar
   startGame={handleOpenStartGameModal}
@@ -390,6 +414,8 @@ return (
   toggleLibraryViewer={toggleLibraryViewer}
   toggleGraveyardViewer={toggleGraveyardViewer}
   toggleExileViewer={toggleExileViewer}
+  toggleTokenViewer={toggleTokenViewer}
+
   resetHand={handleOpenResetHandModal}
  />
  
@@ -457,6 +483,14 @@ return (
    //moveAllCards={handleMoveAllCards}
   />
  )}
+{isTokenViewerOpen && allAvailableTokens && ( // Dodano warunek allAvailableTokens
+ <TokenViewer
+ allAvailableTokens={allAvailableTokens} // <--- DODANY WYMAGANY PROP
+ toggleTokenViewer={toggleTokenViewer}
+ playerColorClass={playerId ? getPlayerColorClass(playerId) : ''}
+ onCreateToken={handleCreateToken}
+ />
+)}
   {/* 4. WARUNKOWE RENDEROWANIE MODALA RESETUJĄCEGO RĘKĘ */}
 {isResetHandModalOpen && (
  <ResetHandModalComponent // <--- Używamy zaimportowanej nazwy

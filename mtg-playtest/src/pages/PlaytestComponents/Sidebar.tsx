@@ -19,6 +19,7 @@ interface SidebarProps {
     toggleGraveyardViewer: () => void;
     toggleExileViewer: () => void;
     resetHand: () => void; // <--- DODANY PROP DO OTWARCIA MODALA
+    toggleTokenViewer: () => void;
 }
 
 export default function Sidebar({
@@ -37,6 +38,7 @@ export default function Sidebar({
     toggleGraveyardViewer,
     toggleExileViewer,
     resetHand, // <--- ODBIERAMY NOWY PROP
+    toggleTokenViewer,
 }: SidebarProps) {
     return (
         <div className="sidebar">
@@ -53,7 +55,10 @@ export default function Sidebar({
             <button className="sidebar-button" onClick={resetHand}>
                 Resetuj rękę
             </button>
-
+            {/* NOWY PRZYCISK DLA TOKENÓW */}
+            <button className="sidebar-button" onClick={toggleTokenViewer}>
+                View Tokens
+            </button>
             {/* Przycisk "View Library" */}
             <button className="sidebar-button" onClick={toggleLibraryViewer}>
                 View Library
