@@ -26,7 +26,7 @@ export interface BattlefieldCardPanelProps extends PanelProps {
   onSetCardStats: (powerValue: number, toughnessValue: number) => void;
   // 1. DODANIE PROPSA flipCard
   flipCard: (cardId: string) => void;
-
+  cloneCard: (cardId: string) => void;
 }
 
 // --- KOMPONENT BATTLEFIELD CARD PANEL ---
@@ -48,6 +48,7 @@ export const BattlefieldCardPanel: React.FC<BattlefieldCardPanelProps> = ({
   onSetCardStats,
   rotateCard180,
   flipCard,
+  cloneCard,
 }) => {
   const [isSettingStats, setIsSettingStats] = useState(false);
   const [powerInput, setPowerInput] = useState<string>('');
@@ -107,6 +108,11 @@ export const BattlefieldCardPanel: React.FC<BattlefieldCardPanelProps> = ({
   const handleDecreaseCounter = () => { onDecreaseCardStatsClick?.(cardOnFieldId); };
   const handleMovetoTopofLibrary = () => { moveCardToTopOfLibrary(cardOnFieldId); onClose(); };
   const handleFlipCard = () => { flipCard(cardOnFieldId); };
+
+ const handleCloneCard = (e: React.MouseEvent) => { 
+    e.stopPropagation(); // 👈 KLUCZOWA ZMIANA: Zatrzymuje propagację zdarzenia
+    cloneCard(cardOnFieldId); 
+};
 
   const handleSetStatsClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -227,7 +233,16 @@ export const BattlefieldCardPanel: React.FC<BattlefieldCardPanelProps> = ({
             <button className="hand-panel-btn action-graveyard" onClick={handleMoveToGraveyard}>Move to Graveyard</button>
             <button className="hand-panel-btn action-exile" onClick={handleMoveToExile}>Move to Exile</button>
             <hr style={{ borderColor: '#444', margin: '2px 0' }} />
-            <button className="hand-panel-btn action-exile" onClick={handleAction(() => console.log('Make Token'))}>-Make Token Copy</button>
+
+
+            <button 
+                className="hand-panel-btn action-copy" 
+                onClick={handleCloneCard} // ✅ Teraz funkcja otrzyma obiekt zdarzenia (React.MouseEvent)
+            >
+                Klonuj Kartę 🎭
+            </button>
+
+
             <hr style={{ borderColor: '#444', margin: '2px 0' }} />
             <button className="hand-panel-btn action-exile" onClick={handleAction(() => console.log('View Card'))}>-View Card</button>
           </div>

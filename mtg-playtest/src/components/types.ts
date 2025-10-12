@@ -57,6 +57,7 @@ export interface CardOnField {
     toughness: number;
   };
   counters: number;
+  isToken: boolean;
 }
 
 export interface Player {

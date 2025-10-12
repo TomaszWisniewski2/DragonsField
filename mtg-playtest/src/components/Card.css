@@ -66,3 +66,21 @@
     visibility: visible; / Ustaw jako widoczny */
 }
 
+.token-label {
+    position: absolute;
+    top: 5px; /* Odległość od góry */
+    left: 50%;
+    transform: translateX(-50%); /* Centrowanie w poziomie */
+    
+    /* Stylizacja wizualna */
+    background-color: rgba(0, 0, 0, 0.7); /* Półprzezroczyste tło */
+    color: white;
+    font-size: 10px; 
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 3px;
+    z-index: 10; /* Upewnienie się, że jest nad obrazem, ale pod innymi wskaźnikami, jeśli to konieczne */
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border: 1px solid rgb(0, 0, 0); /* Dodatkowe wyróżnienie */
+}

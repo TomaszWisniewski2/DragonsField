@@ -307,6 +307,14 @@ export const useSocket = (serverUrl: string) => {
   [emitEvent]
  );
 
+  // 🌟 NOWA FUNKCJA DO KLONOWANIA KARTY
+  const cloneCard = useCallback(
+    (code: string, playerId: string, cardId: string) => {
+      emitEvent("cloneCard", { code, playerId, cardId });
+    },
+    [emitEvent]
+  );
+
   return {
     connected,
     session,
@@ -335,6 +343,7 @@ export const useSocket = (serverUrl: string) => {
     moveAllCardsToBottomOfLibrary,
     discardRandomCard,
     allAvailableTokens,
-    createToken
+    createToken,
+    cloneCard,
   };
 };

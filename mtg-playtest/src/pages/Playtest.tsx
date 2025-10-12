@@ -49,6 +49,7 @@ const {
  discardRandomCard,
  allAvailableTokens,
  createToken,
+ cloneCard,
 } = useSocket(import.meta.env.VITE_SERVER_URL || "http://localhost:3001");
 
 const navigate = useNavigate();
@@ -402,6 +403,7 @@ return (
   rotateCard180={rotateCard180}
   flipCard={flipCard} 
   onCreateToken={handleCreateToken} 
+  cloneCard={cloneCard}
  />
  <Sidebar
   startGame={handleOpenStartGameModal}

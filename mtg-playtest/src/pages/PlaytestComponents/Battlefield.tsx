@@ -48,6 +48,7 @@ interface BattlefieldProps {
   setCardStats: (code: string, playerId: string, cardId: string, powerValue: number, toughnessValue: number) => void;
   flipCard: (code: string, playerId: string, cardId: string) => void;
   onCreateToken: (tokenData: TokenData) => void;
+  cloneCard: (code: string, playerId: string, cardId: string) => void
 }
 
 export default function Battlefield({
@@ -75,6 +76,7 @@ export default function Battlefield({
   rotateCard180,
   flipCard,
   onCreateToken,
+  cloneCard,
 }: BattlefieldProps) {
   const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
@@ -445,6 +447,15 @@ export default function Battlefield({
     }
   };
 
+ // 🌟 POPRAWIONA FUNKCJA AKCJI DLA KLONOWANIA
+ const handleCloneCardAction = (cardId: string) => {
+  // cardId to ID CardOnField przekazane z panelu
+  if (player && player.id === viewedPlayer?.id) {
+   // Wywołujemy prop cloneCard z poprawnymi argumentami
+   cloneCard(sessionCode, player.id, cardId);
+  }
+  //closeCardPanel(); // Zamykamy panel po sklonowaniu
+ };
 
   if (!viewedPlayer) return null;
 
@@ -568,6 +579,7 @@ export default function Battlefield({
           onSetCardStats={handleSetCardStatsAction}
           rotateCard180={handleRotation180Action}
           flipCard={handleFlipCardAction}
+          cloneCard={handleCloneCardAction}
         />
       )}
     </div>
