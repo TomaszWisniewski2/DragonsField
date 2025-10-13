@@ -62,7 +62,7 @@ interface ScryfallCardData {
  * Asynchroniczna funkcja do pobierania szczegółowych danych tokenów 
  * na podstawie URI z pola all_parts.
  */
-
+const MISSING_IMAGE_URL = "https://assets.moxfield.net/assets/images/missing-image.png";
 async function getTokensData(data: ScryfallCardData): Promise<TokenData[] | undefined> {
     if (!data.all_parts) return undefined;
 
@@ -107,24 +107,56 @@ function mapScryfallDataToCardType(data: ScryfallCardData, tokens?: TokenData[])
     const primaryFace = isDfc ? data.card_faces![0] : data;
     const secondFace = isDfc ? data.card_faces![1] : undefined;
 
-    // LOGIKA OBRAZKA: Dla DFC bierzemy obrazek z face[0], dla pozostałych z głównego obiektu.
+    // LOGIKA OBRAZKA PIERWSZEJ STRONY
     const primaryImage = isDfc 
         ? primaryFace.image_uris?.normal 
         : getCardImageUrl(data); 
 
     const primaryLoyalty = primaryFace.type_line?.includes("Planeswalker") ? primaryFace.loyalty : null;
-    const secondImage = secondFace?.image_uris?.normal;
-    const secondLoyalty = secondFace?.type_line?.includes("Planeswalker") ? secondFace.loyalty : null;
+    
+    // Definicje stałych dla brakującej strony
+    const fallbackSecondFaceName = "Odwrotna strona (Brak)";
+    const fallbackSecondFaceTypeLine = "Karta bez drugiej strony";
+    
+    // 1. Inicjalizacja zmiennych dla drugiej strony na podstawie danych Scryfall
+    let finalSecondFaceImage = secondFace?.image_uris?.normal;
+    let finalSecondFaceName = secondFace?.name;
+    let finalSecondFaceManaCost = secondFace?.mana_cost;
+    let finalSecondFaceManaValue = secondFace?.cmc;
+    let finalSecondFaceTypeLine = secondFace?.type_line;
+    
+    // Inicjalizacja statystyk i lojalności (używa || null, co jest bezpieczne)
+    let finalSecondFaceBasePower: string | null = (secondFace?.power === "*" ? "0" : secondFace?.power) || null;
+    let finalSecondFaceBaseToughness: string | null = (secondFace?.toughness === "*" ? "0" : secondFace?.toughness) || null;
+let finalSecondFaceLoyalty: number | null = secondFace?.type_line?.includes("Planeswalker") 
+    ? (secondFace.loyalty ?? null) 
+    : null; 
 
-    const primaryManaValue = primaryFace.cmc || data.cmc; 
-    const secondManaValue = secondFace?.cmc;
 
+    if (!secondFace) {
+        // B) Karta JEST jednostronna - nadpisujemy wartościami domyślnymi
+        finalSecondFaceImage = MISSING_IMAGE_URL;
+        finalSecondFaceName = fallbackSecondFaceName;
+        finalSecondFaceTypeLine = fallbackSecondFaceTypeLine;
+        
+        // Pola, które w CardType są T | undefined, muszą pozostać undefined
+        finalSecondFaceManaCost = undefined;
+        finalSecondFaceManaValue = undefined;
+        
+        // Statystyki, które są T | null, ustawiamy na null
+        finalSecondFaceBasePower = "0";
+        finalSecondFaceBaseToughness = "0";
+        finalSecondFaceLoyalty = null; 
+    }
+
+    // 2. Zwracanie obiektu z bezpiecznym mapowaniem na typy CardType.
+    // Pola oczekujące T | undefined nie używają ?? null, aby uniknąć błędu typowania.
     return {
         id: data.id,
         name: primaryFace.name,
         image: primaryImage || undefined,
         mana_cost: primaryFace.mana_cost,
-        mana_value: primaryManaValue, 
+        mana_value: primaryFace.cmc || data.cmc,
         type_line: primaryFace.type_line,
         basePower: (primaryFace.power === "*" ? "0" : primaryFace.power) || null,
         baseToughness: (primaryFace.toughness === "*" ? "0" : primaryFace.toughness) || null,
@@ -132,15 +164,20 @@ function mapScryfallDataToCardType(data: ScryfallCardData, tokens?: TokenData[])
         
         tokens: tokens, 
 
-        hasSecondFace: isDfc,
-        secondFaceName: secondFace?.name,
-        secondFaceImage: secondImage,
-        secondFaceManaCost: secondFace?.mana_cost,
-        secondFaceManaValue: secondManaValue, 
-        secondFaceTypeLine: secondFace?.type_line,
-        secondFaceBasePower: (secondFace?.power === "*" ? "0" : secondFace?.power) || null,
-        secondFaceBaseToughness: (secondFace?.toughness === "*" ? "0" : secondFace?.toughness) || null,
-        secondFaceLoyalty: secondLoyalty,
+        // 💡 Ustawiamy na TRUE, aby każda karta mogła być odwrócona.
+        hasSecondFace: true, 
+        
+        // Pola oczekujące T | undefined: przypisujemy bezpośrednio (wartości nie-DFC to undefined)
+        secondFaceName: finalSecondFaceName, 
+        secondFaceImage: finalSecondFaceImage, 
+        secondFaceManaCost: finalSecondFaceManaCost, 
+        secondFaceManaValue: finalSecondFaceManaValue, 
+        secondFaceTypeLine: finalSecondFaceTypeLine,
+        
+        // Pola oczekujące T | null (lub T | null | undefined): używamy ?? null dla pewności
+        secondFaceBasePower: finalSecondFaceBasePower,
+        secondFaceBaseToughness: finalSecondFaceBaseToughness,
+        secondFaceLoyalty: finalSecondFaceLoyalty ?? null, 
     };
 }
 

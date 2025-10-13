@@ -213,11 +213,11 @@ export const BattlefieldCardPanel: React.FC<BattlefieldCardPanelProps> = ({
         ) : (
           <div className="hand-panel-options-list">
             <button className="hand-panel-btn" onClick={handleTap}>Tap/Untap (T)</button>
-            {card.hasSecondFace && (
-              <button className="hand-panel-btn action-flip" onClick={handleFlipCard}>
-                {fieldCard.isFlipped ? 'Flip Back' : 'Flip to Other Side'}
-              </button>
-            )}
+
+      <button className="hand-panel-btn action-flip" onClick={handleFlipCard}>
+       {fieldCard.isFlipped ? 'Odwróć z powrotem' : 'Odwróć kartę'}
+      </button>
+           
             <button className="hand-panel-btn" onClick={handle180}>Rotate 180</button>
             <hr style={{ borderColor: '#444', margin: '2px 0' }} />
 
