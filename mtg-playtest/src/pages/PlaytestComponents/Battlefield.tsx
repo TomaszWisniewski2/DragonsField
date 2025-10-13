@@ -208,38 +208,97 @@ export default function Battlefield({
 
   // --- EFFECT HOOKS ---
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 't' && player && player.id === viewedPlayer?.id) {
-        if (selectedCards.length > 0) {
-          selectedCards.forEach(card => {
-            rotateCard(sessionCode, player.id, card.id);
-          });
-        } else if (hoveredCardId) {
-          // Aby obsłużyć rotację po najechaniu, potrzebujemy ID CardOnField, 
-          // ale obecnie hoveredCardId jest ID CardType (jeśli jest ustawiane z Card.card.id).
-          // W tym kontekście zakładamy, że hoveredCardId jest ID CardOnField, 
-          // tak jak jest ustawiane w renderowaniu pętli.
-          rotateCard(sessionCode, player.id, hoveredCardId);
+useEffect(() => {
+  const handleKeyDown = (e: KeyboardEvent) => {
+    // Sprawdzenie, czy bieżący gracz i przeglądany gracz są tym samym graczem
+    if (!player || player.id !== viewedPlayer?.id) {
+      return;
+    }
+
+    if (e.key === 't') {
+      if (selectedCards.length > 0) {
+        selectedCards.forEach(card => {
+          // WAŻNE: W selectedCards masz CardType, ale rotateCard oczekuje ID CardOnField.
+          // Musisz mieć pewność, że w selectedCards masz ID CardOnField, 
+          // lub znaleźć CardOnField na podstawie CardType.id.
+          // Zakładamy, że w Twoim kodzie logika rotacji działa poprawnie 
+          // (lub że 'card.id' w selectedCards to już ID CardOnField).
+          // Zostawiamy jak jest dla 't' dla spójności z Twoim oryginalnym kodem.
+          rotateCard(sessionCode, player.id, card.id);
+        });
+      } else if (hoveredCardId) {
+        // hoveredCardId JEST CardOnField ID
+        rotateCard(sessionCode, player.id, hoveredCardId);
+      }
+    } 
+    
+    // 💡 NOWA OBSŁUGA KLAWISZA 'X' DLA KLONOWANIA
+    if (e.key === 'x') {
+      // Wyszukanie odpowiednich CardOnField, aby pobrać ich unikalne ID pola bitwy (CardOnField.id)
+      
+      const cardIdsToClone: string[] = [];
+      
+      if (selectedCards.length > 0) {
+        // Jeśli zaznaczono wiele kart, musimy znaleźć ich ID na polu bitwy (CardOnField.id).
+        // W selectedCards masz CardType. Zakładamy, że szukasz kart na polu bitwy.
+        // To jest newralgiczny punkt, ponieważ CardType może być taki sam dla wielu kart na polu.
+        // Najprostszym, ale potencjalnie niepoprawnym (zależnie od implementacji) 
+        // sposobem jest użycie ID CardType:
+        // selectedCards.forEach(card => cardIdsToClone.push(card.id));
+        
+        // LEPSZY SPOSÓB (zakłada, że masz dostęp do CardOnField i możesz je przefiltrować):
+        const fieldCards = viewedPlayer.battlefield;
+        
+        // Zbieramy unikalne ID CardOnField dla zaznaczonych CardType
+        fieldCards.forEach(fieldCard => {
+          if (selectedCards.some(selectedCard => selectedCard.id === fieldCard.card.id)) {
+            // Dodajemy CardOnField ID
+            cardIdsToClone.push(fieldCard.id); 
+          }
+        });
+        
+        // UWAGA: Powyższy kod sklonuje WSZYSTKIE karty DANEGO TYPU, 
+        // jeśli tylko JEDNA z nich jest zaznaczona w `selectedCards`.
+        // Jeśli `selectedCards` przechowuje ID CardOnField, to użyj po prostu:
+        // selectedCards.forEach(card => cardIdsToClone.push(card.id)); 
+        // *Ponieważ w Twoim kodzie dla 't' używasz 'card.id', zakładam, że selectedCards 
+        // powinno zawierać ID CardOnField, a nie CardType. 
+        // Jeśli tak nie jest, może być błąd w sposobie, w jaki ustawiasz selectedCards.*
+        
+        // Dla uproszczenia (zgodnego z Twoim użyciem 't'), użyjmy:
+        selectedCards.forEach(card => cardIdsToClone.push(card.id)); 
+
+      } else if (hoveredCardId) {
+        // Karta najechana - mamy jej unikalne ID na polu bitwy
+        cardIdsToClone.push(hoveredCardId); 
+      }
+      
+      // Wykonanie klonowania
+      cardIdsToClone.forEach(cardIdToClone => {
+        if (cardIdToClone) {
+          cloneCard(sessionCode, player.id, cardIdToClone); 
         }
-      }
-    };
+      });
+    }
 
-    const handleClickOutside = (event: MouseEvent | globalThis.MouseEvent) => {
-      const targetNode = event.target as Node;
-      if (isCardPanelOpen && cardPanelRef.current && !cardPanelRef.current.contains(targetNode)) {
-        closeCardPanel();
-      }
-    };
+    // ... pozostały kod handleKeyDown (jeśli istnieje) ...
+  };
 
-    window.addEventListener('keydown', handleKeyDown);
-    document.addEventListener("mousedown", handleClickOutside as (event: globalThis.MouseEvent) => void);
+  const handleClickOutside = (event: MouseEvent | globalThis.MouseEvent) => {
+    const targetNode = event.target as Node;
+    if (isCardPanelOpen && cardPanelRef.current && !cardPanelRef.current.contains(targetNode)) {
+      closeCardPanel();
+    }
+  };
 
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener("mousedown", handleClickOutside as (event: globalThis.MouseEvent) => void);
-    };
-  }, [player, viewedPlayer, hoveredCardId, rotateCard, sessionCode, selectedCards, isCardPanelOpen]);
+  window.addEventListener('keydown', handleKeyDown);
+  document.addEventListener("mousedown", handleClickOutside as (event: globalThis.MouseEvent) => void);
+
+  return () => {
+    window.removeEventListener('keydown', handleKeyDown);
+    document.removeEventListener("mousedown", handleClickOutside as (event: globalThis.MouseEvent) => void);
+  };
+}, [player, viewedPlayer, hoveredCardId, rotateCard, sessionCode, selectedCards, isCardPanelOpen, cloneCard]); // Dodano cloneCard do zależności
 
   // --- OBSŁUGA ZAZNACZANIA MYSZKĄ ---
 

@@ -2,14 +2,14 @@ import { useState, useEffect, useCallback } from "react";
 // Zakładam, że w pliku api/scryfall.ts masz funkcje:
 // getCardByName(name: string): Promise<ScryfallCardData>
 // getCardImageUrl(data: ScryfallCardData): string | null
-// ORAZ NOWĄ: getCardByURI(uri: string): Promise<ScryfallCardData>
-import { getCardByName, getCardImageUrl, getCardByURI } from "../api/scryfall"; 
+// ORAZ: getCardByURI(uri: string): Promise<ScryfallCardData>
+import { getCardByName, getCardImageUrl, getCardByURI,getCardBySetAndNumber } from "../api/scryfall"; 
 import "./DeckManager.css";
-// Importujemy TokenData z pliku types
+// Importujemy CardType i TokenData z pliku types
 import type { CardType, TokenData } from "../components/types"; 
 
 // ----------------------------------------------------------------------
-// 1. DEFINICJE INTERFEJSÓW (Pozostawione bez zmian)
+// 1. DEFINICJE INTERFEJSÓW SCYRFALL
 // ----------------------------------------------------------------------
 
 // Interfejs dla powiązanych części (tokeny, meld, itp.)
@@ -50,16 +50,19 @@ interface ScryfallCardData {
     };
     card_faces?: ScryfallCardFace[];
     all_parts?: ScryfallRelatedPart[]; 
+    // Kluczowe pole do rozróżnienia typów kart dwustronnych/wielopołówkowych
+    layout?: string; 
 }
 
 // ----------------------------------------------------------------------
-// 2. FUNKCJE POMOCNICZE (Pozostawione bez zmian, znajdują się poza komponentem)
+// 2. FUNKCJE POMOCNICZE
 // ----------------------------------------------------------------------
 
 /**
  * Asynchroniczna funkcja do pobierania szczegółowych danych tokenów 
  * na podstawie URI z pola all_parts.
  */
+
 async function getTokensData(data: ScryfallCardData): Promise<TokenData[] | undefined> {
     if (!data.all_parts) return undefined;
 
@@ -70,11 +73,9 @@ async function getTokensData(data: ScryfallCardData): Promise<TokenData[] | unde
     if (tokenUris.length === 0) return undefined;
 
     try {
-        // Pobieramy dane dla wszystkich tokenów równolegle
         const tokenDataPromises = tokenUris.map(uri => getCardByURI(uri));
         const rawTokensData = await Promise.all(tokenDataPromises);
 
-        // Mapujemy surowe dane Scryfall na nasz interfejs TokenData
         const tokens: TokenData[] = rawTokensData.map(tokenData => ({
             name: tokenData.name,
             type_line: tokenData.type_line || '',
@@ -88,24 +89,30 @@ async function getTokensData(data: ScryfallCardData): Promise<TokenData[] | unde
         return tokens;
     } catch (error) {
         console.error("Błąd podczas pobierania danych tokenów:", error);
-        return undefined; // Zwracamy undefined w razie błędu
+        return undefined; 
     }
 }
 
 
 /**
- * Funkcja mapująca dane karty Scryfall na CardType, przyjmująca opcjonalne, 
- * już pobrane, dane tokenów. (Pozostawiona bez zmian)
+ * Funkcja mapująca dane karty Scryfall na CardType, z logiką
+ * obsługi obrazków dla kart Split, Adventure i DFC.
  */
 function mapScryfallDataToCardType(data: ScryfallCardData, tokens?: TokenData[]): CardType {
-    const isDfc = data.card_faces && data.card_faces.length === 2;
+    // Karta jest DFC (Double-Faced Card) TYLKO, gdy layout wymaga obracania
+    const isDfcLayout = ['transform', 'modal_dfc', 'flip'].includes(data.layout || '');
+    const isDfc = data.card_faces && data.card_faces.length === 2 && isDfcLayout;
 
+    // Dla kart Split/Adventure/Normal, obiekt 'data' jest stroną główną
     const primaryFace = isDfc ? data.card_faces![0] : data;
     const secondFace = isDfc ? data.card_faces![1] : undefined;
 
-    const primaryImage = isDfc ? primaryFace.image_uris?.normal : getCardImageUrl(data);
-    const primaryLoyalty = primaryFace.type_line?.includes("Planeswalker") ? primaryFace.loyalty : null;
+    // LOGIKA OBRAZKA: Dla DFC bierzemy obrazek z face[0], dla pozostałych z głównego obiektu.
+    const primaryImage = isDfc 
+        ? primaryFace.image_uris?.normal 
+        : getCardImageUrl(data); 
 
+    const primaryLoyalty = primaryFace.type_line?.includes("Planeswalker") ? primaryFace.loyalty : null;
     const secondImage = secondFace?.image_uris?.normal;
     const secondLoyalty = secondFace?.type_line?.includes("Planeswalker") ? secondFace.loyalty : null;
 
@@ -123,7 +130,6 @@ function mapScryfallDataToCardType(data: ScryfallCardData, tokens?: TokenData[])
         baseToughness: (primaryFace.toughness === "*" ? "0" : primaryFace.toughness) || null,
         loyalty: primaryLoyalty,
         
-        // Zapisujemy powiązane tokeny bezpośrednio na karcie
         tokens: tokens, 
 
         hasSecondFace: isDfc,
@@ -164,7 +170,6 @@ export default function DeckManager() {
             }
         }
     );
-    // NOWY STAN: Lista unikalnych tokenów w całej talii
     const [tokenList, setTokenList] = useState<TokenData[]>(
         () => {
             try {
@@ -185,8 +190,6 @@ export default function DeckManager() {
 
     /**
      * Funkcja aktualizująca globalną listę tokenów.
-     * Zapobiega duplikatom po nazwie tokenu.
-     * Używa setTokenList, więc nie musi być w useCallback.
      */
     const updateTokenList = (newTokens: TokenData[] | undefined) => {
         if (!newTokens || newTokens.length === 0) return;
@@ -204,8 +207,6 @@ export default function DeckManager() {
 
     /**
      * Funkcja do czyszczenia listy tokenów i ponownego skanowania talii.
-     * Zdefiniowana za pomocą useCallback, aby była stabilna.
-     * Ma zależności: deck i setTokenList.
      */
     const recomputeTokenList = useCallback(() => {
         const uniqueTokensMap = new Map<string, TokenData>();
@@ -218,14 +219,14 @@ export default function DeckManager() {
             });
         });
         setTokenList(Array.from(uniqueTokensMap.values()));
-    }, [deck, setTokenList]); // Dodano deck i setTokenList jako zależności!
+    }, [deck, setTokenList]); 
 
     const calculateTotalManaValue = (): number => {
         return deck.reduce((sum, card) => sum + (card.mana_value || 0), 0);
     };
 
     /**
-     * Zmodyfikowano do pobierania szczegółów tokenów ORAZ aktualizacji tokenList
+     * Obsługa dodawania pojedynczej karty.
      */
     async function handleAddCard() {
         if (!query.trim()) return;
@@ -236,7 +237,6 @@ export default function DeckManager() {
             const tokens = await getTokensData(data); 
             const card: CardType = mapScryfallDataToCardType(data, tokens);
 
-            // AKTUALIZACJA GLOBALNEJ LISTY TOKENÓW
             updateTokenList(tokens);
 
             const newDeck = [...deck, card];
@@ -259,16 +259,12 @@ export default function DeckManager() {
         const newDeck = deck.filter((c) => c.id !== id);
         setDeck(newDeck);
         localStorage.setItem("currentDeck", JSON.stringify(newDeck));
-        
-        // Funkcja recomputeTokenList zostanie automatycznie wywołana
-        // przez useEffect poniżej, kiedy zmieni się stan deck.
     }
     
     // Użyj useEffect do ponownego przeliczenia tokenów po zmianie decku
-    // Teraz recomputeTokenList jest stabilne i nie musi być w zależnościach
     useEffect(() => {
         recomputeTokenList();
-    }, [deck, recomputeTokenList]); // Dodano recomputeTokenList jako zależność (jest to dobra praktyka)
+    }, [deck, recomputeTokenList]); 
 
 
     function handleSetCommander(card: CardType) {
@@ -282,9 +278,18 @@ export default function DeckManager() {
     }
 
     /**
-     * Zmodyfikowano do pobierania szczegółów tokenów i aktualizacji tokenList
+     * Obsługa masowego importu.
      */
-    async function handleBulkImport() {
+        async function handleBulkImport() {
+        // Regex do parsowania: (liczba) (nazwa karty) (KOD) (numer)
+        // Match[1]: Liczba, Match[2]: Nazwa (nieużywana do API), Match[3]: KOD, Match[4]: Numer
+        // Przykład, który jest parowany: 1 Giant Killer / Chop Down (ELD) 275
+        const preciseCardLineRegex = /^(\d+)\s+(.+?)\s+\(([A-Z0-9]+)\)\s+([A-Z0-9\-\\/]+)$/;
+
+        // Fallback Regex dla kart bez numeru kolekcjonerskiego (np. 1 Nazwa Karty (KOD)) 
+        // lub z formatowaniem starszych list (np. 1 Nazwa Karty)
+        const basicCardLineRegex = /^(\d+)\s+(.+?)(?:\s+\(([A-Z0-9]+)\))?$/;
+
         const lines = bulkText.split("\n").map((l) => l.trim()).filter(Boolean);
         const newDeck: CardType[] = [];
         const bulkTokens: TokenData[] = [];
@@ -294,18 +299,60 @@ export default function DeckManager() {
         setLoading(true);
         try {
             for (const line of lines) {
-                const match = line.match(/^(\d+)\s+([^(]+)(?:\s+\(.*\))?/);
-                if (!match) continue;
+                let data: ScryfallCardData | null = null;
+                const countMatch = line.match(/^(\d+)/);
+                if (!countMatch) continue;
 
-                const count = parseInt(match[1], 10);
-                const name = match[2].trim();
-
-                const data: ScryfallCardData = await getCardByName(name);
+                const count = parseInt(countMatch[1], 10);
                 
+                // 1. Próba precyzyjnego pobrania (SET + NUMER)
+                const preciseMatch = line.match(preciseCardLineRegex);
+                if (preciseMatch) {
+                    const setCode = preciseMatch[3]; 
+                    const collectorNumber = preciseMatch[4];
+                    try {
+                        // Wymaga getCardBySetAndNumber W API
+                        data = await getCardBySetAndNumber(setCode, collectorNumber);
+                    } catch (error) { // Zmieniono na 'error'
+                        // Jeśli pobieranie po SET/NUMER się nie powiedzie, kontynuujemy do kroku 2 (Fallback)
+                        console.warn(`Nie udało się pobrać karty (SET/NUMER): ${line}. Próba nazwy. Błąd: ${error}`);
+                    }
+                }
+                
+                // 2. Fallback do pobierania po NAZWIE + (ewentualnie SET)
+                if (!data) {
+                    const basicMatch = line.match(basicCardLineRegex);
+                    if (basicMatch) {
+                        const baseName = basicMatch[2].trim();
+                        const setCode = basicMatch[3]; 
+                        
+                        let scryfallQuery = baseName;
+                        if (setCode) {
+                            // Używamy składni "name set:code"
+                            scryfallQuery += ` set:${setCode}`;
+                        }
+                        
+                        // Wymaga getCardByName W API
+                        try {
+                            data = await getCardByName(scryfallQuery);
+                        } catch (error) {
+                            console.error(`Nie udało się pobrać karty (Nazwa/SET): ${line}. Błąd: ${error}`);
+                        }
+                    }
+                }
+
+                if (!data) {
+                    // Pomiń kartę, jeśli ostatecznie nie udało się jej pobrać
+                    console.error(`Ostatecznie nie udało się pobrać danych dla linii: ${line}`);
+                    continue; 
+                }
+
+
+                // LOGIKA DODAWANIA KARTY (taka jak poprzednio)
                 const tokens = await getTokensData(data);
                 const card: CardType = mapScryfallDataToCardType(data, tokens);
 
-                // Zbieranie unikalnych tokenów podczas importu
+                // Zbieranie unikalnych tokenów
                 if (tokens) {
                     tokens.forEach(token => {
                         if (!uniqueTokenNamesInBulk.has(token.name)) {
@@ -315,16 +362,19 @@ export default function DeckManager() {
                     });
                 }
 
+                // Sprawdzanie i ustawianie commandera
                 if (card.type_line?.includes("Legendary Creature") && !newCommander) {
                     newCommander = card;
                 }
 
+                // Dodawanie kart do talii z odpowiednią ilością kopii
                 for (let i = 0; i < count; i++) {
+                    // Użycie unikalnego ID, co jest kluczowe, gdy mamy wiele kopii
                     newDeck.push({ ...card, id: `${card.id}-${i}-${Date.now()}` });
                 }
             }
             
-            // AKTUALIZACJA GLOBALNEJ LISTY TOKENÓW Z PAKIETU
+            // Zakończenie importu
             updateTokenList(bulkTokens);
 
             setDeck(newDeck);
@@ -335,23 +385,80 @@ export default function DeckManager() {
             } else {
                 localStorage.removeItem("commander");
             }
-        } catch (err) {
-            alert("Błąd przy imporcie talii.");
-            console.error(err);
+            setBulkText(""); 
+        } catch (error) {
+            alert(`Błąd krytyczny podczas importu talii. (Błąd: ${error instanceof Error ? error.message : "Nieznany błąd"})`);
+            console.error(error);
         } finally {
             setLoading(false);
         }
     }
-    
+    //--------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // ----------------------------------------------------------------------
+    // ZAKTUALIZOWANA FUNKCJA DO CZYSZCZENIA (Z CZYSZCZENIEM CACHE'U)
+    // ----------------------------------------------------------------------
+    const handleClearStorage = () => {
+        if (window.confirm("Czy na pewno chcesz usunąć całą talię (w tym commandera, tokeny) ORAZ cały cache wyszukiwania kart Scryfall z pamięci lokalnej?")) {
+            
+            // 1. ITERACJA I USUWANIE CACHE'U KART (ZARÓWNO PO NAZWIE JAK I PO URI)
+            const keysToRemove: string[] = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                
+                // Sprawdzanie obu wzorców cache: 'scry_name_' oraz 'scry_uri_'
+                if (key && (key.startsWith("scry_name_") || key.startsWith("scry_uri_"))) {
+                    keysToRemove.push(key);
+                }
+            }
+
+            keysToRemove.forEach(key => {
+                localStorage.removeItem(key);
+            });
+            
+            // 2. USUWANIE GŁÓWNYCH KLUCZY TALII I TOKENÓW
+            localStorage.removeItem("currentDeck");
+            localStorage.removeItem("commander");
+            localStorage.removeItem("tokenList");
+
+            // 3. Resetowanie stanów komponentu
+            setDeck([]);
+            setCommander(null);
+            setTokenList([]);
+            setBulkText("");
+            setQuery("");
+            alert("Talia i cache kart zostały usunięte z pamięci lokalnej.");
+        }
+    };
+    // ----------------------------------------------------------------------
+
+
     const totalManaValue = calculateTotalManaValue();
 
     return (
         <div className="deck-manager-container">
             <h1>Deck Manager</h1>
+            
+            {/* PRZYCISK CZYSZCZENIA LOCALSTORAGE */}
+            <div style={{ margin: "20px 0", textAlign: "right" }}>
+                <button
+                    onClick={handleClearStorage}
+                    style={{ 
+                        padding: "8px 15px", 
+                        background: "#d32f2f", 
+                        color: "white", 
+                        border: "none", 
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        fontWeight: "bold"
+                    }}
+                >
+                    Wyczyść całą talię (localStorage) 🗑️
+                </button>
+            </div>
+
             <p>Dodawaj karty do swojej talii:</p>
 
             {/* Inputy do dodawania kart */}
-            {/* ... (kod inputów) ... */}
             <div style={{ marginBottom: "10px" }}>
                 <input
                     type="text"
@@ -433,7 +540,6 @@ export default function DeckManager() {
                     ))
                 )}
             </div>
-            {/* KONIEC GLOBALNEJ LISTY TOKENÓW */}
             
             <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid #444' }} />
 
@@ -462,7 +568,7 @@ export default function DeckManager() {
                         ) : (
                             <div style={{ height: "160px" }}>{card.name}</div>
                         )}
-                        {/* Wyróżnienie karty DFC */}
+                        {/* Wyróżnienie karty DFC/Split/Adventure */}
                         {card.hasSecondFace && (
                             <p style={{ margin: '4px 0', fontSize: '0.8em', color: 'lightblue' }}>
                                 Karta dwustronna

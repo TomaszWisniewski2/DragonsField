@@ -27,7 +27,34 @@ export async function getCardByName(name: string) {
 }
 
 /**
- * NOWA FUNKCJA: Pobiera dane karty (lub tokenu) bezpośrednio przez Scryfall URI
+ * NOWA FUNKCJA: Pobiera dane karty po kodzie dodatku i numerze kolekcjonerskim.
+ */
+export async function getCardBySetAndNumber(setCode: string, collectorNumber: string) {
+  const key = `scry_setnum_${setCode.toLowerCase()}_${collectorNumber}`;
+  const cached = localStorage.getItem(key);
+  if (cached) return JSON.parse(cached);
+
+  const now = Date.now();
+  const delta = now - lastRequest;
+  if (delta < MIN_GAP) await sleep(MIN_GAP - delta);
+
+  // Użycie punktu końcowego /cards/:code/:number
+  const res = await fetch(`${BASE}/cards/${setCode}/${encodeURIComponent(collectorNumber)}`);
+  lastRequest = Date.now();
+  
+  if (!res.ok) {
+    // Rzucenie błędu, jeśli karta nie została znaleziona
+    throw new Error(`Scryfall: Card not found by Set/Number: ${setCode}/${collectorNumber} (Status: ${res.status})`);
+  }
+  
+  const data = await res.json();
+  // store compact version
+  localStorage.setItem(key, JSON.stringify(data));
+  return data;
+}
+
+/**
+ * Pobiera dane karty (lub tokenu) bezpośrednio przez Scryfall URI
  */
 export async function getCardByURI(uri: string) {
     const key = `scry_uri_${uri}`; // Klucz buforowania oparty na pełnym URI
