@@ -455,6 +455,7 @@ return (
   moveAllCardsToBottomOfLibrary={moveAllCardsToBottomOfLibrary}
   discardRandomCard={discardRandomCard}
   shuffle={handleShuffle}
+  draw={draw}
  />
 
   {isLibraryViewerOpen && (

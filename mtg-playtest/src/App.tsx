@@ -48,7 +48,7 @@ function Nav() {
 export default function App() {
  return (
   <Router>
-   <div style={{ padding: "1rem" }}>
+   <div style={{ paddingTop: "1rem",paddingLeft: "1rem",paddingRight: "1rem" }}>
     <Nav />
 
     <Routes>

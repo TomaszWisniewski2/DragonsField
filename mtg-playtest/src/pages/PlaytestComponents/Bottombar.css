@@ -93,7 +93,7 @@
     position: fixed;
     /* bottom: 85px - dostosuj tę wartość, aby panel wyświetlał się na pożądanej wysokości */
     bottom: 200px; 
-    left: 79%; 
+    left: 75%; 
     z-index: 9000; 
     transform: translateX(0);
     transition: transform 0.3s ease-out; 
@@ -106,7 +106,7 @@
     position: fixed;
     bottom: 200px; 
     /* Dostosuj pozycję lewej krawędzi dla Graveyard */
-    left: 85%; 
+    left: 81%; 
     z-index: 9000; 
     transform: translateX(0);
     transition: transform 0.3s ease-out; 
@@ -117,7 +117,7 @@
     position: fixed;
     bottom: 200px; 
     /* Dostosuj pozycję lewej krawędzi dla Exile */
-    left: 88.5%; 
+    left: 87%; 
     z-index: 9000; 
     transform: translateX(0);
     transition: transform 0.3s ease-out; 
@@ -213,3 +213,51 @@
     white-space: nowrap;
 }
 
+/* Styl dla małego panelu wejściowego (Draw X) */
+.panel-overlay-input {
+    /* Upewnia się, że mały panel jest wyśrodkowany wewnątrz głównego kontenera */
+    padding: 10px;
+    background-color: #1a1a1a; /* Ciemne tło */
+    border: 1px solid #333;
+    border-radius: 6px;
+    width: 200px; /* Mała, stała szerokość */
+    margin: 10px; /* Lekki margines od krawędzi głównego panelu */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    /* Ustawienie, aby był widoczny i unosił się */
+    position: relative; 
+    left: -800px;
+    Top: -200px;
+}
+
+.panel-input-title {
+    color: #fff;
+    font-size: 14px;
+    margin-top: 0;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.full-width-input {
+    width: 90%; 
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #555;
+    background-color: #2a2a2a;
+    color: #fff;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.panel-input-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 5px;
+}
+
+.action-btn-confirm {
+    background-color: #007bff; /* Kolor akcentu dla potwierdzenia */
+}
+
+.action-btn-cancel {
+    background-color: #6c757d; /* Kolor dla anulowania */
+}

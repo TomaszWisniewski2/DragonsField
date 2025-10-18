@@ -1,25 +1,24 @@
+body {
+  overflow-x: hidden; /* Ukrywa poziomy pasek przewijania */
+  margin: 0; /* Upewnia się, że domyślne marginesy body są usunięte */
+  padding: 0;
+}
+
 .playtest-container {
   display: grid;
-  grid-template-columns: 1fr 190px;
-  grid-template-rows: 50px 1fr 210px;
-  height: 100vh;
-  width: 98.5vw;
-  overflow: hidden;
+  grid-template-columns: 1fr 180px;
+  grid-template-rows: 64px 1fr 190px;
+  height: 99vh;
+  /* Zmieniamy szerokość na 100vw, aby obejść problem z 98.5vw */
+  /* width: 100vw;  */
+   /* **KLUCZOWA ZMIANA: Ukrywa skrolowanie w pionie i poziomie** */
+  /* **LUB tylko w poziomie** */
   background-color: #2e2d2d;
+  overflow: hidden;
 }
 
 /* Navbar */
-.navbar {
-  grid-column: 1 / 3;
-  grid-row: 1 / 2;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #1b1b1b;
-  border-bottom: 2px solid #444;
-  padding: 0 15px;
-  color: #fff;
-}
+
 .nav-section {
   display: flex;
   align-items: center;
@@ -54,7 +53,7 @@
   
   flex: 1;
   position: relative;
-  border: 1px solid #ffffff;
+  border: 2px solid #ffffff;
   background: #201e1e;
 }
 
@@ -84,15 +83,17 @@
 
 /* Bottom bar */
 .bottom-bar {
-  grid-column: 1 / 3;
+  grid-column: 1 /3;
   grid-row: 3 / 4;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   padding: 8px ;
+  
   /* Zaktualizuj border-top, aby używał zmiennej koloru gracza */
   border-top: 2px solid var(--player-color);
   background: #201f1f;
+  
   
 }
 

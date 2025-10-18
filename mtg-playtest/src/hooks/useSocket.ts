@@ -178,30 +178,32 @@ export const useSocket = (serverUrl: string) => {
     [emitEvent]
   );
 
-  const moveCard = useCallback(
-    (
-      code: string,
-      playerId: string,
-      from: Zone,
-      to: Zone,
-      cardId: string,
-      x?: number,
-      y?: number,
-      position?: number // NOWE
-    ) => {
-      emitEvent("moveCard", {
-        code,
-        playerId,
-        from,
-        to,
-        cardId,
-        x,
-        y,
-        position,
-      });
-    },
-    [emitEvent]
-  );
+const moveCard = useCallback(
+  (
+   code: string,
+   playerId: string,
+   from: Zone,
+   to: Zone,
+   cardId: string,
+   x?: number,
+   y?: number,
+   position?: number,
+   toBottom?: boolean // NOWE: Opcjonalny parametr, domyślnie undefined (czyli góra stosu)
+  ) => {
+   emitEvent("moveCard", {
+    code,
+    playerId,
+    from,
+    to,
+    cardId,
+    x,
+    y,
+    position,
+    toBottom, // Przekazanie do serwera
+   });
+  },
+  [emitEvent]
+ );
 
   const rotateCard = useCallback(
     (code: string, playerId: string, cardId: string) => {

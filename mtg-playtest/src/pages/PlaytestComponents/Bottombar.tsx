@@ -1,14 +1,17 @@
+// Bottombar.tsx
 import React, { useState, useRef, useEffect } from "react";
+// Importujemy ZONES
+import Zones from "./Zones"; // Upewnij się, że ścieżka jest poprawna
+
 import Card from "../../components/Card";
 import type { Player, Zone, Session, CardType, SortCriteria } from "../../components/types";
 import "./../Playtest.css";
 import "./Bottombar.css";
 
-// Import Paneli (założenie, że są w katalogu 'panels')
+// Import Paneli
 import { HandPanel } from "./panels/HandPanel";
 import { LibraryPanel, type LibraryPanelProps } from "./panels/LibraryPanel";
 import { GraveyardPanel, type GraveyardPanelProps } from "./panels/GraveyardPanel";
-// Domyślnie ExilePanelProps importuje uproszczoną wersję
 import { ExilePanel, type ExilePanelProps } from "./panels/ExilePanel";
 import { CardPanel, type CardPanelProps } from "./panels/CardPanel";
 
@@ -32,7 +35,11 @@ interface BottombarProps {
     playerId: string,
     from: Zone,
     to: Zone,
-    cardId: string
+    cardId: string,
+    x?: number,         // Dodane
+  y?: number,         // Dodane
+  position?: number,  // Dodane
+  toBottom?: boolean  // Dodane
   ) => void;
   clearSelectedCards: () => void;
   handleCardHover: (card: CardType | null) => void;
@@ -41,9 +48,7 @@ interface BottombarProps {
   toggleExileViewer: () => void;
   sessionCode: string;
   viewedPlayer: Player | null | undefined;
-  // Ta sygnatura (z czterema argumentami) jest funkcją przychodzącą z useSocket
   handleMoveAllCards: (
-    // USUNIĘTO code: string, playerId: string,
     from: Zone,
     to: Zone,
   ) => void;
@@ -52,6 +57,7 @@ interface BottombarProps {
   moveAllCardsToBottomOfLibrary: (code: string, playerId: string, from: Zone) => void;
   discardRandomCard: (code: string, playerId: string) => void;
   shuffle: (code: string, playerId: string) => void;
+  draw: (code: string, playerId: string, count: number) => void;
 }
 
 // Export PanelProps dla pozostałych komponentów
@@ -71,12 +77,13 @@ export default function Bottombar({
   toggleLibraryViewer,
   toggleGraveyardViewer,
   toggleExileViewer,
-  handleMoveAllCards, // Właściwa funkcja z useSocket
+  handleMoveAllCards,
   zoom,
   sortHand,
   moveAllCardsToBottomOfLibrary,
   discardRandomCard,
   shuffle,
+  draw,
 }: BottombarProps) {
 
   // --- STANY I REFERENCJE ---
@@ -107,17 +114,17 @@ export default function Bottombar({
   };
 
 
- const toggleLibraryTopRevealed = () => {
-  // Resetujemy podgląd hovera przy przełączeniu
-  if (isLibraryTopRevealed) {
-   handleCardHover(null);
-  } else if (player && player.library.length > 0) {
-   // Jeśli włączamy i jest karta, od razu podglądamy ją
-   // POPRAWKA: Używamy indeksu [0] dla górnej karty
-   handleCardHover(player.library[0]); 
-  }
-  setIsLibraryTopRevealed(prev => !prev);
- };
+  const toggleLibraryTopRevealed = () => {
+    // Resetujemy podgląd hovera przy przełączeniu
+    if (isLibraryTopRevealed) {
+      handleCardHover(null);
+    } else if (player && player.library.length > 0) {
+      // Jeśli włączamy i jest karta, od razu podglądamy ją
+      // POPRAWKA: Używamy indeksu [0] dla górnej karty
+      handleCardHover(player.library[0]); 
+    }
+    setIsLibraryTopRevealed(prev => !prev);
+  };
 
   const handleCardContextMenu = (e: React.MouseEvent<HTMLDivElement>, card: CardType) => {
     e.preventDefault();
@@ -155,9 +162,7 @@ export default function Bottombar({
   };
 
 
-
-  // --- LOGIKA PRZEŁĄCZANIA PANELI (BEZ ZMIAN) ---
-
+  // --- LOGIKA PRZEŁĄCZANIA PANELI (przekazana do Zones) ---
   const toggleHandPanel = (e: React.MouseEvent<HTMLElement>) => {
     e.stopPropagation();
     if (isHandPanelOpen) {
@@ -240,8 +245,7 @@ export default function Bottombar({
 
 
   // NOWA FUNKCJA - opakowująca oryginalny prop handleMoveAllCards.
-  // Przyjmuje tylko from i to, a dodaje session.code i player.id
-
+  // Ta funkcja zostaje, ponieważ używa player.id i session.code
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>, toZone: Zone) => {
     e.preventDefault();
@@ -262,9 +266,7 @@ export default function Bottombar({
     }
   };
 
-  // -------------------------------------------------------------------------------------
-  // ZMIANA: Strefa źródłowa (from) musi być ustawiona na "hand"
-  // -------------------------------------------------------------------------------------
+  // Funkcje do CardPanel, zostają w Bottombar, bo używają sessionCode, player.id i moveCard
   const handleMoveToGraveyardAction = (cardId: string) => {
     if (player && player.id === viewedPlayer?.id) {
       moveCard(sessionCode, player.id, "hand", "graveyard", cardId);
@@ -283,14 +285,24 @@ export default function Bottombar({
       moveCard(sessionCode, player.id, "hand", "library", cardId);
     }
   };
+  
+  const handleMovetoBottomofLibrary = (cardId: string) => {
+  if (player && player.id === viewedPlayer?.id) {
+   // Dół biblioteki (toBottom: true)
+   // UWAGA: Musisz dostosować sygnaturę propa moveCard w BottombarProps, 
+   // aby przyjmowała dodatkowe argumenty (x, y, position, toBottom), 
+   // tak jak zrobiliśmy to w useSocket.ts.
+   // Zakładając, że to zostało już zrobione, wywołanie wygląda tak:
+   moveCard(sessionCode, player.id, "hand", "library", cardId, undefined, undefined, undefined, true); 
+  }
+ };
   // ------------------------------------------------------------------------------
-  const MTG_CARD_BACK_URL = "https://assets.moxfield.net/assets/images/missing-image.png";
 
   return (
     <>
       <div className={`bottom-bar ${getPlayerColorClass(player.id)}`} ref={bottomBarRef}>
 
-        {/* Obszar RĘKI (Hand) */}
+        {/* Obszar RĘKI (Hand) - zostaje w Bottombar, bo jest szerszy i ma unikalny układ */}
         <div
           className="hand fixed-hand-width"
           onDragOver={(e) => e.preventDefault()}
@@ -334,205 +346,28 @@ export default function Bottombar({
           </div>
         </div>
 
-        <div className="zones-container">
+{/* WYDZIELONE ZONY (Zones) - PO ZMIANACH */}
+      <Zones
+        player={player}
+        session={session}
+        getPlayerColorClass={getPlayerColorClass}
+        setDragOffset={setDragOffset}
+        handleDrop={handleDrop}
+        handleCardHover={handleCardHover}
+        zoom={zoom}
+        
+        isLibraryPanelOpen={isLibraryPanelOpen}
+        isGraveyardPanelOpen={isGraveyardPanelOpen}
+        isExilePanelOpen={isExilePanelOpen}
+        isLibraryTopRevealed={isLibraryTopRevealed}
+        
+        toggleLibraryPanel={toggleLibraryPanel}
+        toggleGraveyardPanel={toggleGraveyardPanel}
+        toggleExilePanel={toggleExilePanel}
 
- {/* Kontener dla Library */}
-          <div className="zone-box-container">
-            <span
-              id="library-toggle"
-              className="zone-label"
-              onClick={toggleLibraryPanel as React.MouseEventHandler<HTMLSpanElement>}
-              style={{ cursor: 'pointer' }}
-            >
-              Library ({player?.library.length ?? 0})
-              {isLibraryPanelOpen ? ' ▲' : ' ▼'}
-            </span>
-            <div
-              className="zone-box library"
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => handleDrop(e, "library")}
-              onClick={(e) => e.stopPropagation()}
-            >
-              
-              {/* 👇 ZMIENIONA LOGIKA RENDEROWANIA KARTY BIBLIOTEKI */}
-              {player.library.length > 0 && (
-                <div
-                  draggable
-                  onDragStart={(e) => {
-                    const cardId = player.library[0].id; 
-                    e.dataTransfer.setData("cardId", cardId);
-                    e.dataTransfer.setData("from", "library");
-                    // Używamy rewersu jako obrazu przeciągania
-                    e.dataTransfer.setDragImage(
-                      (e.currentTarget.querySelector('.mtg-card-back') || e.currentTarget.querySelector('.card-component')) as Element, 
-                      e.currentTarget.offsetWidth / 2, 
-                      e.currentTarget.offsetHeight / 2
-                    );
-                  }}
-                  onMouseEnter={() => {
-                    // Podgląd górnej karty tylko, gdy jest ODKRYTA
-                    if (isLibraryTopRevealed) {
-                      handleCardHover(player.library[player.library.length - 1]);
-                    }
-                  }}
-                  onMouseLeave={() => {
-                    if (isLibraryTopRevealed) {
-                       handleCardHover(null)
-                    }
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {isLibraryTopRevealed ? (
-                    // WIDOK ODKRYTEJ KARTY
-                    <Card
-                      card={player.library[0]}
-                      from="library"
-                      ownerId={player.id}
-                      getPlayerColorClass={getPlayerColorClass}
-                      // Brakuje propa zoom, dodaj go
-                      zoom={zoom}
-                    />
-                  ) : (
-                    // WIDOK REWERSU (DOMYŚLNY)
-                    <img
-                      src={MTG_CARD_BACK_URL}
-                      alt="MTG Card Back"
-                      className="mtg-card-back"
-                    />
-                  )}
-                </div>
-              )}
-              {/* 👆 KONIEC ZMIENIONEJ LOGIKI */}
-              
-            </div>
-          </div>
-
-          {/* Kontener dla Graveyard */}
-          <div className="zone-box-container">
-            <span
-              id="graveyard-toggle"
-              className="zone-label"
-              onClick={toggleGraveyardPanel as React.MouseEventHandler<HTMLSpanElement>}
-              style={{ cursor: 'pointer' }}
-            >
-              Graveyard ({player?.graveyard.length ?? 0})
-              {isGraveyardPanelOpen ? ' ▲' : ' ▼'}
-            </span>
-            <div
-              className="zone-box graveyard"
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => handleDrop(e, "graveyard")}
-            >
-              {player.graveyard.length > 0 && (
-                <div
-                  draggable
-                  onDragStart={(e) => {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    setDragOffset({
-                      x: e.clientX - rect.left,
-                      y: e.clientY - rect.top,
-                    });
-                    const cardId = player.graveyard[player.graveyard.length - 1].id;
-                    e.dataTransfer.setData("cardId", cardId);
-                    e.dataTransfer.setData("from", "graveyard");
-                  }}
-                  onMouseEnter={() => handleCardHover(player.graveyard[player.graveyard.length - 1])}
-                  onMouseLeave={() => handleCardHover(null)}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Card
-                    card={player.graveyard[player.graveyard.length - 1]}
-                    from="graveyard"
-                    ownerId={player.id}
-                    getPlayerColorClass={getPlayerColorClass}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Kontener dla Exile */}
-          <div className="zone-box-container">
-            <span
-              id="exile-toggle"
-              className="zone-label"
-              onClick={toggleExilePanel as React.MouseEventHandler<HTMLSpanElement>}
-              style={{ cursor: 'pointer' }}
-            >
-              Exile ({player?.exile.length ?? 0})
-              {isExilePanelOpen ? ' ▲' : ' ▼'}
-            </span>
-            <div
-              className="zone-box exile"
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => handleDrop(e, "exile")}
-            >
-              {player.exile.length > 0 && (
-                <div
-                  draggable
-                  onDragStart={(e) => {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    setDragOffset({
-                      x: e.clientX - rect.left,
-                      y: e.clientY - rect.top,
-                    });
-                    const cardId = player.exile[player.exile.length - 1].id;
-                    e.dataTransfer.setData("cardId", cardId);
-                    e.dataTransfer.setData("from", "exile");
-                  }}
-                  onMouseEnter={() => handleCardHover(player.exile[player.exile.length - 1])}
-                  onMouseLeave={() => handleCardHover(null)}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Card
-                    card={player.exile[player.exile.length - 1]}
-                    from="exile"
-                    ownerId={player.id}
-                    getPlayerColorClass={getPlayerColorClass}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* ZONA - Commander Zone */}
-          {session.sessionType === "commander" && (
-            <div className="zone-box-container">
-              <span className="zone-label">Commander Zone</span>
-              <div
-                className="zone-box commander-zone"
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => handleDrop(e, "commanderZone")}
-              >
-                {player.commanderZone.length > 0 && (
-                  <div
-                    draggable
-                    onDragStart={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      setDragOffset({
-                        x: e.clientX - rect.left,
-                        y: e.clientY - rect.top,
-                      });
-                      const cardId = player.commanderZone[0].id;
-                      e.dataTransfer.setData("cardId", cardId);
-                      e.dataTransfer.setData("from", "commanderZone");
-                    }}
-                    onMouseEnter={() => handleCardHover(player.commanderZone[0])}
-                    onMouseLeave={() => handleCardHover(null)}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Card
-                      card={player.commanderZone[0]}
-                      from="commanderZone"
-                      ownerId={player.id}
-                      getPlayerColorClass={getPlayerColorClass}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+      />
+      {/* KONIEC WYDZIELONYCH ZON */}
+        
       </div>
 
       {/* RENDEROWANIE PANELI */}
@@ -543,7 +378,7 @@ export default function Bottombar({
           panelRef={handPanelRef}
           handleMoveAllCards={handleMoveAllCards}
           sortHand={sortHand}
-          sessionCode={session.code} // DODAJEMY SESSION CODE I PLAYER ID
+          sessionCode={session.code}
           playerId={player.id}
           moveAllCardsToBottomOfLibrary={moveAllCardsToBottomOfLibrary}
           discardRandomCard={discardRandomCard}
@@ -558,16 +393,17 @@ export default function Bottombar({
           handleMoveAllCards={handleMoveAllCards}
           player={player}
           sessionCode={sessionCode}
-          isTopRevealed={isLibraryTopRevealed} // Przekazujemy stan do panelu, aby przycisk wiedział, czy jest aktywny
-          toggleTopRevealed={toggleLibraryTopRevealed} // Przekazujemy funkcję przełączającą
-          handleCardHover={handleCardHover} // Przekazujemy, aby panel mógł zresetować podgląd
+          isTopRevealed={isLibraryTopRevealed}
+          toggleTopRevealed={toggleLibraryTopRevealed}
+          handleCardHover={handleCardHover}
           shuffle={shuffle}
+          draw={draw}
         />
       )}
 
       {isGraveyardPanelOpen && (
         <GraveyardPanel
-          sessionCode={session.code} // DODAJEMY SESSION CODE I PLAYER ID
+          sessionCode={session.code}
           playerId={player.id}
           onClose={() => setIsGraveyardPanelOpen(false)}
           panelRef={graveyardPanelRef}
@@ -579,12 +415,11 @@ export default function Bottombar({
 
       {isExilePanelOpen && (
         <ExilePanel
-          sessionCode={session.code} // DODAJEMY SESSION CODE I PLAYER ID
+          sessionCode={session.code}
           playerId={player.id}
           onClose={() => setIsExilePanelOpen(false)}
           panelRef={exilePanelRef}
           toggleExileViewer={toggleExileViewer}
-          // Przekazujemy funkcję o TYPIE: (from: Zone, to: Zone) => void
           handleMoveAllCards={handleMoveAllCards}
           moveAllCardsToBottomOfLibrary={moveAllCardsToBottomOfLibrary}
         />
@@ -600,6 +435,7 @@ export default function Bottombar({
           moveCardToGraveyard={handleMoveToGraveyardAction}
           moveCardToExile={handleMoveToExileAction}
           moveCardToTopOfLibrary={handleMovetoTopofLibrary}
+          moveCardToBottomOfLibrary={handleMovetoBottomofLibrary}
         />
       )}
     </>
