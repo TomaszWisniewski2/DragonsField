@@ -19,7 +19,7 @@ import { useNavigate } from "react-router-dom";
 import ResetHandModalComponent from "../components/ResetHandModal";
 import ExitGameModalComponent from "../components/ExitGameModal"
 import TokenViewer from "./PlaytestComponents/TokenViewer";
-
+import SideboardViewer from "./PlaytestComponents/SideboardViewer";
 export default function Playtest() {
 const {
  connected,
@@ -50,6 +50,7 @@ const {
  allAvailableTokens,
  createToken,
  cloneCard,
+ moveCardToBattlefieldFlipped,
 } = useSocket(import.meta.env.VITE_SERVER_URL || "http://localhost:3001");
 
 const navigate = useNavigate();
@@ -65,6 +66,7 @@ const [isTokenViewerOpen, setIsTokenViewerOpen] = useState(false);
 const [isManaPanelVisible, setIsManaPanelVisible] = useState(false);
 const [isResetHandModalOpen, setIsResetHandModalOpen] = useState(false);
 const [isExitGameModalOpen, setIsExitGameModalOpen] = useState(false);
+const [isSideboardViewerOpen, setIsSideboardViewerOpen] = useState(false);
 // Usunięto lokalny stan sessionStats
 
 const player = session?.players.find((p) => p.id === playerId);
@@ -91,6 +93,9 @@ const handleJoinSession = (code: string, sessionType: SessionType) => {
  const savedDeck = localStorage.getItem("currentDeck");
  const deck: CardType[] = savedDeck ? JSON.parse(savedDeck) : [];
  
+  const savedSideboard = localStorage.getItem("currentSideboard");
+ const sideboard: CardType[] = savedSideboard ? JSON.parse(savedSideboard) : [];
+
  if (!playerName) {
  alert("Nazwa gracza nie może być pusta.");
  return;
@@ -107,7 +112,7 @@ const handleJoinSession = (code: string, sessionType: SessionType) => {
  return;
  }
  
- joinSession(code, playerName, deck, sessionType);
+ joinSession(code, playerName, deck, sessionType,sideboard);
 };
 
 const handleShuffle = () => {
@@ -155,6 +160,7 @@ const toggleLibraryViewer = () => {
  setIsGraveyardViewerOpen(false);
  setIsExileViewerOpen(false);
  setIsTokenViewerOpen(false);
+ setIsSideboardViewerOpen(false);
 };
 
 const toggleGraveyardViewer = () => {
@@ -162,6 +168,7 @@ const toggleGraveyardViewer = () => {
  setIsLibraryViewerOpen(false);
  setIsExileViewerOpen(false);
  setIsTokenViewerOpen(false);
+ setIsSideboardViewerOpen(false);
 };
 
 const toggleExileViewer = () => {
@@ -169,6 +176,7 @@ const toggleExileViewer = () => {
  setIsGraveyardViewerOpen(false);
  setIsLibraryViewerOpen(false);
  setIsTokenViewerOpen(false);
+ setIsSideboardViewerOpen(false);
 };
 
 const toggleTokenViewer = () => {
@@ -176,6 +184,15 @@ const toggleTokenViewer = () => {
  setIsGraveyardViewerOpen(false);
  setIsLibraryViewerOpen(false);
  setIsExileViewerOpen(false);
+ setIsSideboardViewerOpen(false);
+};
+
+const toggleSideboardViewer = () => {
+ setIsSideboardViewerOpen(!isSideboardViewerOpen);
+ setIsGraveyardViewerOpen(false);
+ setIsLibraryViewerOpen(false);
+ setIsExileViewerOpen(false);
+ setIsTokenViewerOpen(false);
 };
 
 const toggleManaPanel = useCallback(() => {
@@ -417,7 +434,7 @@ return (
   toggleGraveyardViewer={toggleGraveyardViewer}
   toggleExileViewer={toggleExileViewer}
   toggleTokenViewer={toggleTokenViewer}
-
+  toggleSideboardViewer={toggleSideboardViewer}
   resetHand={handleOpenResetHandModal}
  />
  
@@ -456,6 +473,7 @@ return (
   discardRandomCard={discardRandomCard}
   shuffle={handleShuffle}
   draw={draw}
+  moveCardToBattlefieldFlipped={moveCardToBattlefieldFlipped}
  />
 
   {isLibraryViewerOpen && (
@@ -494,6 +512,18 @@ return (
  onCreateToken={handleCreateToken}
  />
 )}
+
+{isSideboardViewerOpen && (
+ <SideboardViewer
+ player={player}
+ toggleSideboardViewer={toggleSideboardViewer}
+ playerColorClass={playerId ? getPlayerColorClass(playerId) : ''}
+ moveCard={moveCard}
+ sessionCode={session.code}
+ />
+)}
+
+
   {/* 4. WARUNKOWE RENDEROWANIE MODALA RESETUJĄCEGO RĘKĘ */}
 {isResetHandModalOpen && (
  <ResetHandModalComponent // <--- Używamy zaimportowanej nazwy

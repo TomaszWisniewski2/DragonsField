@@ -136,9 +136,10 @@ export const useSocket = (serverUrl: string) => {
       code: string,
       playerName: string,
       deck: CardType[],
-      sessionType: SessionType
+      sessionType: SessionType,
+      sideboardCards: CardType[]
     ) => {
-      emitEvent("joinSession", { code, playerName, deck, sessionType });
+      emitEvent("joinSession", { code, playerName, deck, sessionType,sideboardCards });
     },
     [emitEvent]
   );
@@ -338,6 +339,13 @@ const moveCard = useCallback(
     [emitEvent]
   );
 
+  const moveCardToBattlefieldFlipped = useCallback(
+    (code: string, playerId: string, cardId: string, from: Zone) => {
+      emitEvent("moveCardToBattlefieldFlipped", { code, playerId, cardId, from });
+    },
+    [emitEvent]
+  );
+
   return {
     connected,
     session,
@@ -368,5 +376,6 @@ const moveCard = useCallback(
     allAvailableTokens,
     createToken,
     cloneCard,
+    moveCardToBattlefieldFlipped,
   };
 };

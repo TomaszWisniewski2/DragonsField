@@ -7,8 +7,8 @@ body {
 .playtest-container {
   display: grid;
   grid-template-columns: 1fr 180px;
-  grid-template-rows: 64px 1fr 190px;
-  height: 99vh;
+  grid-template-rows: 49px 1fr 190px;
+  height: 98vh;
   /* Zmieniamy szerokość na 100vw, aby obejść problem z 98.5vw */
   /* width: 100vw;  */
    /* **KLUCZOWA ZMIANA: Ukrywa skrolowanie w pionie i poziomie** */

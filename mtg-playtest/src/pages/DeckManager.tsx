@@ -3,18 +3,18 @@ import { useState, useEffect, useCallback } from "react";
 // getCardByName(name: string): Promise<ScryfallCardData>
 // getCardImageUrl(data: ScryfallCardData): string | null
 // ORAZ: getCardByURI(uri: string): Promise<ScryfallCardData>
-import { getCardByName, getCardImageUrl, getCardByURI,getCardBySetAndNumber } from "../api/scryfall"; 
+import { getCardByName, getCardImageUrl, getCardByURI, getCardBySetAndNumber } from "../api/scryfall";
 import "./DeckManager.css";
 // Importujemy CardType i TokenData z pliku types
-import type { CardType, TokenData } from "../components/types"; 
+import type { CardType, TokenData } from "../components/types";
 
 // ----------------------------------------------------------------------
-// 1. DEFINICJE INTERFEJSÓW SCYRFALL
+// 1. DEFINICJE INTERFEJSÓW SCYRFALL (BEZ ZMIAN)
 // ----------------------------------------------------------------------
 
 // Interfejs dla powiązanych części (tokeny, meld, itp.)
 interface ScryfallRelatedPart {
-    object: string; 
+    object: string;
     id: string;
     component: string; // 'token' jest kluczowy
     name: string;
@@ -26,7 +26,7 @@ interface ScryfallCardFace {
     name: string;
     mana_cost: string;
     type_line: string;
-    cmc: number; 
+    cmc: number;
     power?: string;
     toughness?: string;
     loyalty?: number;
@@ -40,7 +40,7 @@ interface ScryfallCardData {
     name: string;
     mana_cost?: string;
     type_line?: string;
-    cmc: number; 
+    cmc: number;
     power?: string;
     toughness?: string;
     loyalty?: number;
@@ -49,17 +49,17 @@ interface ScryfallCardData {
         normal: string;
     };
     card_faces?: ScryfallCardFace[];
-    all_parts?: ScryfallRelatedPart[]; 
+    all_parts?: ScryfallRelatedPart[];
     // Kluczowe pole do rozróżnienia typów kart dwustronnych/wielopołówkowych
-    layout?: string; 
+    layout?: string;
 }
 
 // ----------------------------------------------------------------------
-// 2. FUNKCJE POMOCNICZE
+// 2. FUNKCJE POMOCNICZE (BEZ ZMIANY MAPOWANIA)
 // ----------------------------------------------------------------------
 
 /**
- * Asynchroniczna funkcja do pobierania szczegółowych danych tokenów 
+ * Asynchroniczna funkcja do pobierania szczegółowych danych tokenów
  * na podstawie URI z pola all_parts.
  */
 const MISSING_IMAGE_URL = "https://assets.moxfield.net/assets/images/missing-image.png";
@@ -89,7 +89,7 @@ async function getTokensData(data: ScryfallCardData): Promise<TokenData[] | unde
         return tokens;
     } catch (error) {
         console.error("Błąd podczas pobierania danych tokenów:", error);
-        return undefined; 
+        return undefined;
     }
 }
 
@@ -108,29 +108,29 @@ function mapScryfallDataToCardType(data: ScryfallCardData, tokens?: TokenData[])
     const secondFace = isDfc ? data.card_faces![1] : undefined;
 
     // LOGIKA OBRAZKA PIERWSZEJ STRONY
-    const primaryImage = isDfc 
-        ? primaryFace.image_uris?.normal 
-        : getCardImageUrl(data); 
+    const primaryImage = isDfc
+        ? primaryFace.image_uris?.normal
+        : getCardImageUrl(data);
 
     const primaryLoyalty = primaryFace.type_line?.includes("Planeswalker") ? primaryFace.loyalty : null;
-    
+
     // Definicje stałych dla brakującej strony
     const fallbackSecondFaceName = "Odwrotna strona (Brak)";
     const fallbackSecondFaceTypeLine = "Karta bez drugiej strony";
-    
+
     // 1. Inicjalizacja zmiennych dla drugiej strony na podstawie danych Scryfall
     let finalSecondFaceImage = secondFace?.image_uris?.normal;
     let finalSecondFaceName = secondFace?.name;
     let finalSecondFaceManaCost = secondFace?.mana_cost;
     let finalSecondFaceManaValue = secondFace?.cmc;
     let finalSecondFaceTypeLine = secondFace?.type_line;
-    
+
     // Inicjalizacja statystyk i lojalności (używa || null, co jest bezpieczne)
     let finalSecondFaceBasePower: string | null = (secondFace?.power === "*" ? "0" : secondFace?.power) || null;
     let finalSecondFaceBaseToughness: string | null = (secondFace?.toughness === "*" ? "0" : secondFace?.toughness) || null;
-let finalSecondFaceLoyalty: number | null = secondFace?.type_line?.includes("Planeswalker") 
-    ? (secondFace.loyalty ?? null) 
-    : null; 
+    let finalSecondFaceLoyalty: number | null = secondFace?.type_line?.includes("Planeswalker")
+        ? (secondFace.loyalty ?? null)
+        : null;
 
 
     if (!secondFace) {
@@ -138,15 +138,15 @@ let finalSecondFaceLoyalty: number | null = secondFace?.type_line?.includes("Pla
         finalSecondFaceImage = MISSING_IMAGE_URL;
         finalSecondFaceName = fallbackSecondFaceName;
         finalSecondFaceTypeLine = fallbackSecondFaceTypeLine;
-        
+
         // Pola, które w CardType są T | undefined, muszą pozostać undefined
         finalSecondFaceManaCost = undefined;
         finalSecondFaceManaValue = undefined;
-        
+
         // Statystyki, które są T | null, ustawiamy na null
         finalSecondFaceBasePower = "0";
         finalSecondFaceBaseToughness = "0";
-        finalSecondFaceLoyalty = null; 
+        finalSecondFaceLoyalty = null;
     }
 
     // 2. Zwracanie obiektu z bezpiecznym mapowaniem na typy CardType.
@@ -161,23 +161,23 @@ let finalSecondFaceLoyalty: number | null = secondFace?.type_line?.includes("Pla
         basePower: (primaryFace.power === "*" ? "0" : primaryFace.power) || null,
         baseToughness: (primaryFace.toughness === "*" ? "0" : primaryFace.toughness) || null,
         loyalty: primaryLoyalty,
-        
-        tokens: tokens, 
+
+        tokens: tokens,
 
         // 💡 Ustawiamy na TRUE, aby każda karta mogła być odwrócona.
-        hasSecondFace: true, 
-        
+        hasSecondFace: true,
+
         // Pola oczekujące T | undefined: przypisujemy bezpośrednio (wartości nie-DFC to undefined)
-        secondFaceName: finalSecondFaceName, 
-        secondFaceImage: finalSecondFaceImage, 
-        secondFaceManaCost: finalSecondFaceManaCost, 
-        secondFaceManaValue: finalSecondFaceManaValue, 
+        secondFaceName: finalSecondFaceName,
+        secondFaceImage: finalSecondFaceImage,
+        secondFaceManaCost: finalSecondFaceManaCost,
+        secondFaceManaValue: finalSecondFaceManaValue,
         secondFaceTypeLine: finalSecondFaceTypeLine,
-        
+
         // Pola oczekujące T | null (lub T | null | undefined): używamy ?? null dla pewności
         secondFaceBasePower: finalSecondFaceBasePower,
         secondFaceBaseToughness: finalSecondFaceBaseToughness,
-        secondFaceLoyalty: finalSecondFaceLoyalty ?? null, 
+        secondFaceLoyalty: finalSecondFaceLoyalty ?? null,
     };
 }
 
@@ -192,6 +192,17 @@ export default function DeckManager() {
             try {
                 const savedDeck = localStorage.getItem("currentDeck");
                 return savedDeck ? JSON.parse(savedDeck) : [];
+            } catch {
+                return [];
+            }
+        }
+    );
+    // 💡 NOWY STAN DLA SIDEBOARDU
+    const [sideboard, setSideboard] = useState<CardType[]>(
+        () => {
+            try {
+                const savedSideboard = localStorage.getItem("currentSideboard");
+                return savedSideboard ? JSON.parse(savedSideboard) : [];
             } catch {
                 return [];
             }
@@ -218,15 +229,21 @@ export default function DeckManager() {
         }
     );
     const [loading, setLoading] = useState(false);
+    // 💡 Zmieniamy pole bulkText na pole, które obsługuje rozdzielenie Deck/Sideboard
     const [bulkText, setBulkText] = useState("");
 
-    // Użyj useEffect do aktualizacji localStorage dla tokenList, gdy się zmieni
+    // Użyj useEffect do aktualizacji localStorage
     useEffect(() => {
         localStorage.setItem("tokenList", JSON.stringify(tokenList));
     }, [tokenList]);
 
+    // 💡 Aktualizacja localStorage dla Sideboardu
+    useEffect(() => {
+        localStorage.setItem("currentSideboard", JSON.stringify(sideboard));
+    }, [sideboard]);
+
     /**
-     * Funkcja aktualizująca globalną listę tokenów.
+     * Funkcja aktualizująca globalną listę tokenów (teraz uwzględnia sideboard).
      */
     const updateTokenList = (newTokens: TokenData[] | undefined) => {
         if (!newTokens || newTokens.length === 0) return;
@@ -234,7 +251,7 @@ export default function DeckManager() {
         setTokenList(prevList => {
             const currentTokenNames = new Set(prevList.map(t => t.name));
             const uniqueNewTokens = newTokens.filter(token => !currentTokenNames.has(token.name));
-            
+
             if (uniqueNewTokens.length > 0) {
                 return [...prevList, ...uniqueNewTokens];
             }
@@ -243,12 +260,13 @@ export default function DeckManager() {
     };
 
     /**
-     * Funkcja do czyszczenia listy tokenów i ponownego skanowania talii.
+     * Funkcja do czyszczenia listy tokenów i ponownego skanowania talii (teraz uwzględnia sideboard).
      */
     const recomputeTokenList = useCallback(() => {
         const uniqueTokensMap = new Map<string, TokenData>();
 
-        deck.forEach(card => {
+        // Skanowanie głównej talii i sideboardu
+        [...deck, ...sideboard].forEach(card => {
             card.tokens?.forEach(token => {
                 if (!uniqueTokensMap.has(token.name)) {
                     uniqueTokensMap.set(token.name, token);
@@ -256,7 +274,7 @@ export default function DeckManager() {
             });
         });
         setTokenList(Array.from(uniqueTokensMap.values()));
-    }, [deck, setTokenList]); 
+    }, [deck, sideboard, setTokenList]); // 💡 Zmieniono zależności na deck i sideboard
 
     const calculateTotalManaValue = (): number => {
         return deck.reduce((sum, card) => sum + (card.mana_value || 0), 0);
@@ -270,13 +288,14 @@ export default function DeckManager() {
         setLoading(true);
         try {
             const data: ScryfallCardData = await getCardByName(query.trim());
-            
-            const tokens = await getTokensData(data); 
+
+            const tokens = await getTokensData(data);
             const card: CardType = mapScryfallDataToCardType(data, tokens);
 
             updateTokenList(tokens);
 
-            const newDeck = [...deck, card];
+            // 💡 Nowe karty trafiają do głównej talii
+            const newDeck = [...deck, { ...card, id: `${card.id}-${Date.now()}` }]; // Dodajemy unikalne ID
             setDeck(newDeck);
             localStorage.setItem("currentDeck", JSON.stringify(newDeck));
             setQuery("");
@@ -288,25 +307,63 @@ export default function DeckManager() {
         }
     }
 
-    function handleRemoveCard(id: string) {
+    /**
+     * Funkcja do usuwania karty z dowolnej listy (Deck lub Sideboard).
+     */
+    function handleRemoveCard(id: string, isSideboard: boolean = false) {
         if (commander && commander.id === id) {
             setCommander(null);
             localStorage.removeItem("commander");
         }
-        const newDeck = deck.filter((c) => c.id !== id);
-        setDeck(newDeck);
-        localStorage.setItem("currentDeck", JSON.stringify(newDeck));
+
+        if (isSideboard) {
+            const newSideboard = sideboard.filter((c) => c.id !== id);
+            setSideboard(newSideboard);
+        } else {
+            const newDeck = deck.filter((c) => c.id !== id);
+            setDeck(newDeck);
+        }
+        // localStorage jest aktualizowany w useEffect, ale dla decku musimy to zrobić tu, 
+        // jeśli to nie jest tylko useEffect (dla decku jest odświeżany po dodaniu, więc dla usuwania 
+        // też powinniśmy) - jednak rezygnujemy z ręcznego update w tym miejscu, 
+        // polegając na recomputeTokenList + useEffects.
     }
-    
-    // Użyj useEffect do ponownego przeliczenia tokenów po zmianie decku
+
+    /**
+     * Funkcja do przenoszenia karty między taliami.
+     */
+    function handleToggleCardLocation(card: CardType, isSideboard: boolean) {
+        if (isSideboard) {
+            // Przenieś z Sideboard do Deck
+            const newSideboard = sideboard.filter(c => c.id !== card.id);
+            setSideboard(newSideboard);
+            setDeck(prevDeck => [...prevDeck, card]);
+        } else {
+            // Przenieś z Deck do Sideboard
+            const newDeck = deck.filter(c => c.id !== card.id);
+            setDeck(newDeck);
+            setSideboard(prevSideboard => [...prevSideboard, card]);
+        }
+    }
+
+
+    // Użyj useEffect do ponownego przeliczenia tokenów po zmianie decku lub sideboardu
     useEffect(() => {
         recomputeTokenList();
-    }, [deck, recomputeTokenList]); 
-
+    }, [deck, sideboard, recomputeTokenList]); // 💡 Dodano sideboard do zależności
 
     function handleSetCommander(card: CardType) {
         setCommander(card);
         localStorage.setItem("commander", JSON.stringify(card));
+        
+        // 💡 Jeśli commander jest w sideboardzie, usuń go stamtąd
+        if (sideboard.some(c => c.id === card.id)) {
+            setSideboard(prevSideboard => prevSideboard.filter(c => c.id !== card.id));
+        }
+        // 💡 Upewnij się, że commander jest w talii, jeśli był tylko w sideboardzie
+        if (!deck.some(c => c.id === card.id) && !sideboard.some(c => c.id === card.id)) {
+             setDeck(prevDeck => [...prevDeck, card]);
+        }
     }
 
     function handleRemoveCommander() {
@@ -316,31 +373,37 @@ export default function DeckManager() {
 
     /**
      * Obsługa masowego importu.
+     * 💡 Zmodyfikowana logika, by rozdzielić Deck i Sideboard na podstawie klucza "SIDEBOARD:".
      */
-        async function handleBulkImport() {
-        // Regex do parsowania: (liczba) (nazwa karty) (KOD) (numer)
-        // Match[1]: Liczba, Match[2]: Nazwa (nieużywana do API), Match[3]: KOD, Match[4]: Numer
-        // Przykład, który jest parowany: 1 Giant Killer / Chop Down (ELD) 275
+    async function handleBulkImport() {
         const preciseCardLineRegex = /^(\d+)\s+(.+?)\s+\(([A-Z0-9]+)\)\s+([A-Z0-9\-\\/]+)$/;
-
-        // Fallback Regex dla kart bez numeru kolekcjonerskiego (np. 1 Nazwa Karty (KOD)) 
-        // lub z formatowaniem starszych list (np. 1 Nazwa Karty)
         const basicCardLineRegex = /^(\d+)\s+(.+?)(?:\s+\(([A-Z0-9]+)\))?$/;
 
         const lines = bulkText.split("\n").map((l) => l.trim()).filter(Boolean);
         const newDeck: CardType[] = [];
+        const newSideboard: CardType[] = [];
         const bulkTokens: TokenData[] = [];
         let newCommander: CardType | null = null;
         const uniqueTokenNamesInBulk = new Set<string>();
 
+        let isSideboardSection = false;
+
         setLoading(true);
         try {
             for (const line of lines) {
+                // 💡 Sprawdzanie, czy linia oznacza początek sideboardu
+                if (line.toUpperCase() === "SIDEBOARD:") {
+                    isSideboardSection = true;
+                    continue;
+                }
+                
                 let data: ScryfallCardData | null = null;
                 const countMatch = line.match(/^(\d+)/);
                 if (!countMatch) continue;
 
                 const count = parseInt(countMatch[1], 10);
+                
+                // ... (Logika pobierania danych karty, bez zmian) ...
                 
                 // 1. Próba precyzyjnego pobrania (SET + NUMER)
                 const preciseMatch = line.match(preciseCardLineRegex);
@@ -348,10 +411,8 @@ export default function DeckManager() {
                     const setCode = preciseMatch[3]; 
                     const collectorNumber = preciseMatch[4];
                     try {
-                        // Wymaga getCardBySetAndNumber W API
                         data = await getCardBySetAndNumber(setCode, collectorNumber);
-                    } catch (error) { // Zmieniono na 'error'
-                        // Jeśli pobieranie po SET/NUMER się nie powiedzie, kontynuujemy do kroku 2 (Fallback)
+                    } catch (error) { 
                         console.warn(`Nie udało się pobrać karty (SET/NUMER): ${line}. Próba nazwy. Błąd: ${error}`);
                     }
                 }
@@ -365,11 +426,9 @@ export default function DeckManager() {
                         
                         let scryfallQuery = baseName;
                         if (setCode) {
-                            // Używamy składni "name set:code"
                             scryfallQuery += ` set:${setCode}`;
                         }
                         
-                        // Wymaga getCardByName W API
                         try {
                             data = await getCardByName(scryfallQuery);
                         } catch (error) {
@@ -379,7 +438,6 @@ export default function DeckManager() {
                 }
 
                 if (!data) {
-                    // Pomiń kartę, jeśli ostatecznie nie udało się jej pobrać
                     console.error(`Ostatecznie nie udało się pobrać danych dla linii: ${line}`);
                     continue; 
                 }
@@ -399,15 +457,19 @@ export default function DeckManager() {
                     });
                 }
 
-                // Sprawdzanie i ustawianie commandera
-                if (card.type_line?.includes("Legendary Creature") && !newCommander) {
+                // Sprawdzanie i ustawianie commandera (tylko w głównej talii)
+                if (!isSideboardSection && card.type_line?.includes("Legendary Creature") && !newCommander) {
                     newCommander = card;
                 }
 
-                // Dodawanie kart do talii z odpowiednią ilością kopii
+                // Dodawanie kart do odpowiedniej listy z odpowiednią ilością kopii
                 for (let i = 0; i < count; i++) {
-                    // Użycie unikalnego ID, co jest kluczowe, gdy mamy wiele kopii
-                    newDeck.push({ ...card, id: `${card.id}-${i}-${Date.now()}` });
+                    const uniqueCard = { ...card, id: `${card.id}-${i}-${Date.now()}` };
+                    if (isSideboardSection) {
+                        newSideboard.push(uniqueCard);
+                    } else {
+                        newDeck.push(uniqueCard);
+                    }
                 }
             }
             
@@ -415,8 +477,12 @@ export default function DeckManager() {
             updateTokenList(bulkTokens);
 
             setDeck(newDeck);
+            setSideboard(newSideboard); // 💡 Zapisywanie sideboardu
             setCommander(newCommander);
+
+            // Zapisywanie w localStorage
             localStorage.setItem("currentDeck", JSON.stringify(newDeck));
+            localStorage.setItem("currentSideboard", JSON.stringify(newSideboard)); // 💡 Zapisywanie sideboardu
             if (newCommander) {
                 localStorage.setItem("commander", JSON.stringify(newCommander));
             } else {
@@ -432,18 +498,17 @@ export default function DeckManager() {
     }
     //--------------------------------------------------------------------------------------------------------------------------------------------------------------
     // ----------------------------------------------------------------------
-    // ZAKTUALIZOWANA FUNKCJA DO CZYSZCZENIA (Z CZYSZCZENIEM CACHE'U)
+    // ZAKTUALIZOWANA FUNKCJA DO CZYSZCZENIA (Z CZYSZCZENIEM SIDEBOARDU)
     // ----------------------------------------------------------------------
     const handleClearStorage = () => {
         if (window.confirm("Czy na pewno chcesz usunąć całą talię (w tym commandera, tokeny) ORAZ cały cache wyszukiwania kart Scryfall z pamięci lokalnej?")) {
-            
-            // 1. ITERACJA I USUWANIE CACHE'U KART (ZARÓWNO PO NAZWIE JAK I PO URI)
+
+            // 1. ITERACJA I USUWANIE CACHE'U KART 
             const keysToRemove: string[] = [];
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
-                
-                // Sprawdzanie obu wzorców cache: 'scry_name_' oraz 'scry_uri_'
-                if (key && (key.startsWith("scry_name_") || key.startsWith("scry_uri_"))) {
+
+                if (key &&  key.startsWith("scry")) {
                     keysToRemove.push(key);
                 }
             }
@@ -451,19 +516,21 @@ export default function DeckManager() {
             keysToRemove.forEach(key => {
                 localStorage.removeItem(key);
             });
-            
-            // 2. USUWANIE GŁÓWNYCH KLUCZY TALII I TOKENÓW
+
+            // 2. USUWANIE GŁÓWNYCH KLUCZY TALII, SIDEBOARDU I TOKENÓW
             localStorage.removeItem("currentDeck");
+            localStorage.removeItem("currentSideboard"); // 💡 Usuwanie klucza sideboardu
             localStorage.removeItem("commander");
             localStorage.removeItem("tokenList");
 
             // 3. Resetowanie stanów komponentu
             setDeck([]);
+            setSideboard([]); // 💡 Resetowanie stanu sideboardu
             setCommander(null);
             setTokenList([]);
             setBulkText("");
             setQuery("");
-            alert("Talia i cache kart zostały usunięte z pamięci lokalnej.");
+            alert("Talia, Sideboard i cache kart zostały usunięte z pamięci lokalnej.");
         }
     };
     // ----------------------------------------------------------------------
@@ -474,24 +541,26 @@ export default function DeckManager() {
     return (
         <div className="deck-manager-container">
             <h1>Deck Manager</h1>
-            
+
             {/* PRZYCISK CZYSZCZENIA LOCALSTORAGE */}
             <div style={{ margin: "20px 0", textAlign: "right" }}>
                 <button
                     onClick={handleClearStorage}
-                    style={{ 
-                        padding: "8px 15px", 
-                        background: "#d32f2f", 
-                        color: "white", 
-                        border: "none", 
+                    style={{
+                        padding: "8px 15px",
+                        background: "#d32f2f",
+                        color: "white",
+                        border: "none",
                         borderRadius: "4px",
                         cursor: "pointer",
                         fontWeight: "bold"
                     }}
                 >
-                    Wyczyść całą talię (localStorage) 🗑️
+                    Wyczyść całą talię i cache 🗑️
                 </button>
             </div>
+            
+            <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid #444' }} />
 
             <p>Dodawaj karty do swojej talii:</p>
 
@@ -516,16 +585,21 @@ export default function DeckManager() {
                     disabled={loading}
                     style={{ marginLeft: "8px", padding: "6px 12px" }}
                 >
-                    {loading ? "Ładowanie..." : "Dodaj"}
+                    {loading ? "Ładowanie..." : "Dodaj do Decku"}
                 </button>
             </div>
 
             {/* Import całego decku */}
-            <h2>Import całej talii</h2>
+            <h2>Import całej talii (Deck + Sideboard)</h2>
+            <p style={{ fontSize: '0.9em', color: '#ccc' }}>
+                Aby oddzielić sideboard, użyj linii: <code style={{ color: 'yellow' }}>SIDEBOARD:</code>
+            </p>
             <textarea
                 value={bulkText}
                 onChange={(e) => setBulkText(e.target.value)}
-                placeholder="Wklej listę kart (np. 4 Lightning Bolt)"
+                placeholder="Wklej listę kart (np. 4 Lightning Bolt)
+SIDEBOARD:
+1 Atomize"
                 className="bulk-import-textarea"
             />
             <button
@@ -552,7 +626,9 @@ export default function DeckManager() {
                     </button>
                 </div>
             )}
-            
+
+            <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid #444' }} />
+
             {/* GLOBALNA LISTA TOKENÓW */}
             <h2 style={{ marginTop: "20px" }}>Lista tokenów do gry ({tokenList.length}) 🎲</h2>
             <div className="token-list" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center', padding: '10px', backgroundColor: '#222', borderRadius: '8px' }}>
@@ -562,9 +638,9 @@ export default function DeckManager() {
                     tokenList.map((token) => (
                         <div key={token.name} style={{ width: '100px', textAlign: 'center', padding: '5px', border: '1px solid #444', borderRadius: '4px', backgroundColor: '#333' }}>
                             {token.image && (
-                                <img 
-                                    src={token.image} 
-                                    alt={token.name} 
+                                <img
+                                    src={token.image}
+                                    alt={token.name}
                                     style={{ width: '100%', height: 'auto', borderRadius: '4px', marginBottom: '4px' }}
                                 />
                             )}
@@ -577,88 +653,182 @@ export default function DeckManager() {
                     ))
                 )}
             </div>
-            
+
             <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid #444' }} />
 
             {/* lista kart w talii */}
-            <h2 style={{ marginTop: "20px" }}>Twoja talia ({deck.length} kart)</h2>
+            <h2 style={{ marginTop: "20px" }}>Twoja Główna Talia ({deck.length} kart)</h2>
             <p style={{ fontWeight: 'bold' }}>
                 Całkowity Mana Value talii: {totalManaValue.toFixed(2)}
             </p>
-            <div className="deck-list">
+            <div className="deck-list" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                 {deck.map((card) => (
-                    <div
+                    <CardDisplay
                         key={card.id}
-                        style={{
-                            border: commander && commander.id === card.id ? '2px solid gold' : '1px solid gray',
-                            padding: "4px",
-                            textAlign: "center",
-                            width: "120px",
-                        }}
-                    >
-                        {card.image ? (
-                            <img
-                                src={card.image}
-                                alt={card.name}
-                                style={{ width: "100%", height: "auto" }}
-                            />
-                        ) : (
-                            <div style={{ height: "160px" }}>{card.name}</div>
-                        )}
-                        {/* Wyróżnienie karty DFC/Split/Adventure */}
-                        {card.hasSecondFace && (
-                            <p style={{ margin: '4px 0', fontSize: '0.8em', color: 'lightblue' }}>
-                                Karta dwustronna
-                            </p>
-                        )}
-                        
-                        {/* WYŚWIETLANIE SZCZEGÓŁÓW TOKENÓW ZWIĄZANYCH Z TĄ KARTĄ */}
-                        {card.tokens && card.tokens.length > 0 && (
-                            <div style={{ margin: '4px 0', fontSize: '0.7em', color: 'yellowgreen', borderTop: '1px solid #333', paddingTop: '4px' }}>
-                                **Tokeny tej karty:**
-                                {card.tokens.map((token: TokenData, index) => (
-                                    <div key={index} style={{ margin: '0', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                        <div style={{ fontWeight: 'bold' }}>{token.name}</div>
-                                        {token.basePower !== null && token.baseToughness !== null && (
-                                            <div style={{ color: 'lightcoral', fontSize: '0.8em' }}>{token.basePower}/{token.baseToughness}</div>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                        
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
-                            <button
-                                onClick={() => handleRemoveCard(card.id)}
-                                style={{
-                                    padding: "4px 8px",
-                                    background: "red",
-                                    color: "white",
-                                    border: "none",
-                                    cursor: "pointer",
-                                }}
-                            >
-                                Usuń
-                            </button>
-                            <button
-                                onClick={() => handleSetCommander(card)}
-                                style={{
-                                    padding: "4px 8px",
-                                    background: "#4CAF50",
-                                    color: "white",
-                                    border: "none",
-                                    cursor: "pointer",
-                                }}
-                            >
-                                Ustaw jako commandera
-                            </button>
-                        </div>
-                    </div>
+                        card={card}
+                        commander={commander}
+                        isSideboard={false}
+                        handleRemoveCard={handleRemoveCard}
+                        handleSetCommander={handleSetCommander}
+                        handleToggleCardLocation={handleToggleCardLocation}
+                    />
                 ))}
             </div>
-
-
             
+            <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid #444' }} />
+            
+            {/* 💡 NOWA SEKCJA DLA SIDEBOARDU */}
+            <h2 style={{ marginTop: "20px" }}>Sideboard ({sideboard.length} kart) 🩹</h2>
+            <div className="sideboard-list" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                {sideboard.length === 0 ? (
+                    <p style={{ color: '#ccc' }}>Brak kart w Sideboardzie.</p>
+                ) : (
+                    sideboard.map((card) => (
+                        <CardDisplay
+                            key={card.id}
+                            card={card}
+                            commander={commander}
+                            isSideboard={true} // 💡 Oznaczamy jako sideboard
+                            handleRemoveCard={handleRemoveCard}
+                            handleSetCommander={handleSetCommander}
+                            handleToggleCardLocation={handleToggleCardLocation}
+                        />
+                    ))
+                )}
+            </div>
+            {/* Koniec sekcji sideboardu */}
+
+
         </div>
     );
 }
+
+// ----------------------------------------------------------------------
+// 4. NOWY KOMPONENT POMOCNICZY DO WYŚWIETLANIA KARTY (aby uniknąć powtarzania kodu)
+// ----------------------------------------------------------------------
+interface CardDisplayProps {
+    card: CardType;
+    commander: CardType | null;
+    isSideboard: boolean;
+    handleRemoveCard: (id: string, isSideboard: boolean) => void;
+    handleSetCommander: (card: CardType) => void;
+    handleToggleCardLocation: (card: CardType, isSideboard: boolean) => void;
+}
+
+const CardDisplay: React.FC<CardDisplayProps> = ({
+    card,
+    commander,
+    isSideboard,
+    handleRemoveCard,
+    handleSetCommander,
+    handleToggleCardLocation
+}) => {
+    return (
+        <div
+            style={{
+                border: commander && commander.id === card.id ? '2px solid gold' : '1px solid gray',
+                padding: "4px",
+                textAlign: "center",
+                width: "120px",
+                backgroundColor: isSideboard ? '#252525' : '#1e1e1e', // Lżejsze tło dla sideboardu
+                borderRadius: '4px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+            }}
+        >
+            {card.image ? (
+                <img
+                    src={card.image}
+                    alt={card.name}
+                    style={{ width: "100%", height: "auto", borderRadius: '2px' }}
+                />
+            ) : (
+                <div style={{ height: "160px", display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{card.name}</div>
+            )}
+            
+            {/* {card.hasSecondFace && (
+                <p style={{ margin: '4px 0', fontSize: '0.8em', color: 'lightblue' }}>
+                    Karta dwustronna
+                </p>
+            )} */}
+
+            {/* Tokeny */}
+            {card.tokens && card.tokens.length > 0 && (
+                <div style={{ margin: '4px 0', fontSize: '0.7em', color: 'yellowgreen', borderTop: '1px solid #333', paddingTop: '4px' }}>
+                    **Tokeny tej karty:**
+                    {card.tokens.map((token: TokenData, index) => (
+                        <div key={index} style={{ margin: '0', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                            <div style={{ fontWeight: 'bold' }}>{token.name}</div>
+                            {token.basePower !== null && token.baseToughness !== null && (
+                                <div style={{ color: 'lightcoral', fontSize: '0.8em' }}>{token.basePower}/{token.baseToughness}</div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
+                <button
+                    onClick={() => handleRemoveCard(card.id, isSideboard)}
+                    style={{
+                        padding: "4px 8px",
+                        background: "red",
+                        color: "white",
+                        border: "none",
+                        cursor: "pointer",
+                        borderRadius: '2px',
+                    }}
+                >
+                    Usuń
+                </button>
+                
+                {isSideboard ? (
+                    // Przycisk dla Sideboardu
+                    <button
+                        onClick={() => handleToggleCardLocation(card, true)}
+                        style={{
+                            padding: "4px 8px",
+                            background: "skyblue",
+                            color: "black",
+                            border: "none",
+                            cursor: "pointer",
+                            borderRadius: '2px',
+                        }}
+                    >
+                        Przenieś do Decku
+                    </button>
+                ) : (
+                    // Przyciski dla Decku
+                    <>
+                        <button
+                            onClick={() => handleSetCommander(card)}
+                            disabled={!!commander && commander.id === card.id}
+                            style={{
+                                padding: "4px 8px",
+                                background: "#4CAF50",
+                                color: "white",
+                                border: "none",
+                                cursor: "pointer",
+                                borderRadius: '2px',
+                            }}
+                        >
+                            {commander && commander.id === card.id ? 'Commander (ustawiony)' : 'Ustaw jako commandera'}
+                        </button>
+                        <button
+                            onClick={() => handleToggleCardLocation(card, false)}
+                            style={{
+                                padding: "4px 8px",
+                                background: "#ff9800",
+                                color: "white",
+                                border: "none",
+                                cursor: "pointer",
+                                borderRadius: '2px',
+                            }}
+                        >
+                            Przenieś do Sideboardu
+                        </button>
+                    </>
+                )}
+            </div>
+        </div>
+    );
+};

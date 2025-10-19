@@ -5,7 +5,8 @@ export type Zone =
   | "battlefield"
   | "graveyard"
   | "exile"
-  | "commanderZone";
+  | "commanderZone"
+  | "sideboard";
 
 export type SessionType = "standard" | "commander";
 
@@ -72,6 +73,7 @@ export interface Player {
   exile: CardType[];
   commanderZone: CardType[];
   commander?: CardType;
+  sideboard: CardType[];
   manaPool: {
     W: number;
     U: number;

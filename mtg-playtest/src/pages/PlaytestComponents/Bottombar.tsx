@@ -58,6 +58,7 @@ interface BottombarProps {
   discardRandomCard: (code: string, playerId: string) => void;
   shuffle: (code: string, playerId: string) => void;
   draw: (code: string, playerId: string, count: number) => void;
+  moveCardToBattlefieldFlipped: (code: string, playerId: string, cardId: string, from: Zone) => void
 }
 
 // Export PanelProps dla pozostałych komponentów
@@ -84,6 +85,7 @@ export default function Bottombar({
   discardRandomCard,
   shuffle,
   draw,
+  moveCardToBattlefieldFlipped,
 }: BottombarProps) {
 
   // --- STANY I REFERENCJE ---
@@ -296,6 +298,16 @@ export default function Bottombar({
    moveCard(sessionCode, player.id, "hand", "library", cardId, undefined, undefined, undefined, true); 
   }
  };
+
+
+ const handleMoveToBattlefieldFlippedAction = (cardId: string) => {
+    if (player && player.id === viewedPlayer?.id) {
+        // Zakładamy, że karta w panelu kontekstowym pochodzi z "hand"
+        // W przyszłości możesz potrzebować bardziej elastycznego rozwiązania, jeśli ten panel będzie używany dla kart z innych stref
+        const fromZone: Zone = "hand";
+        moveCardToBattlefieldFlipped(sessionCode, player.id, cardId, fromZone);
+    }
+};
   // ------------------------------------------------------------------------------
 
   return (
@@ -436,6 +448,7 @@ export default function Bottombar({
           moveCardToExile={handleMoveToExileAction}
           moveCardToTopOfLibrary={handleMovetoTopofLibrary}
           moveCardToBottomOfLibrary={handleMovetoBottomofLibrary}
+          moveCardToBattlefieldFlipped={handleMoveToBattlefieldFlippedAction}
         />
       )}
     </>

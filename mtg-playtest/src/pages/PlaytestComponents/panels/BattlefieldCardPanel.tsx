@@ -215,7 +215,7 @@ export const BattlefieldCardPanel: React.FC<BattlefieldCardPanelProps> = ({
             <button className="hand-panel-btn" onClick={handleTap}>Tap/Untap (T)</button>
 
       <button className="hand-panel-btn action-flip" onClick={handleFlipCard}>
-       {fieldCard.isFlipped ? 'Odwróć z powrotem' : 'Odwróć kartę'}
+       {fieldCard.isFlipped ? 'Flip back' : 'Flip'}
       </button>
            
             <button className="hand-panel-btn" onClick={handle180}>Rotate 180</button>
@@ -239,7 +239,7 @@ export const BattlefieldCardPanel: React.FC<BattlefieldCardPanelProps> = ({
                 className="hand-panel-btn action-copy" 
                 onClick={handleCloneCard} // ✅ Teraz funkcja otrzyma obiekt zdarzenia (React.MouseEvent)
             >
-                Klonuj Kartę 🎭
+                Copy 🎭 (X)
             </button>
 
 

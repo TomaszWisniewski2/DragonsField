@@ -4,6 +4,7 @@ import React from "react";
 // Zakładamy, że PanelProps i CardType są już poprawnie zaimportowane z types.ts
 import type { PanelProps, CardType } from "../../../components/types";
 
+
 // INTERFEJS DLA CARDPANEL
 interface CardPanelProps extends PanelProps {
  card: CardType;
@@ -15,6 +16,8 @@ interface CardPanelProps extends PanelProps {
  moveCardToTopOfLibrary: (cardId: string) => void;
  // NOWA FUNKCJA
  moveCardToBottomOfLibrary: (cardId: string) => void; 
+ moveCardToBattlefieldFlipped: (cardId: string) => void;
+ 
 }
 
 // --- KOMPONENT CARD PANEL (ZMODYFIKOWANY, ABY UŻYWAĆ KLAS CSS) ---
@@ -29,9 +32,10 @@ export const CardPanel: React.FC<CardPanelProps> = ({
  moveCardToExile,
  moveCardToTopOfLibrary,
  moveCardToBottomOfLibrary, // NOWY PROP
+moveCardToBattlefieldFlipped,
 }) => {
  // Funkcje do obsługi akcji, używają już logiki zamknięcia panelu
- const handleUntap = () => { onClose(); console.log(`Untapping card: ${card.name}`); };
+
 
  const handleSetStats = () => { onClose(); console.log(`Setting stats for ${card.name}`); };
 
@@ -43,6 +47,11 @@ export const CardPanel: React.FC<CardPanelProps> = ({
  // NOWA FUNKCJA DO OBSŁUGI PRZENOSZENIA NA DÓŁ BIBLIOTEKI
  const handleMovetoBottomofLibrary = () => { moveCardToBottomOfLibrary(card.id); onClose(); };
  
+
+const handleMoveToBattlefieldFlipped = () => { 
+    moveCardToBattlefieldFlipped(card.id); 
+    onClose(); 
+};
  // Logika transformacji oparta na kierunku (MUSIMY ZACHOWAĆ DYNAMICZNE STYLE)
  const transformStyle = `translate(-50%, ${panelDirection === 'up' ? '-100%' : '0'})`;
 
@@ -89,7 +98,7 @@ export const CardPanel: React.FC<CardPanelProps> = ({
 
      <hr style={{ borderColor: "#444", margin: "2px 0" }} /> {/* Separator dla czytelności */}
      
-     <button className="hand-panel-btn" onClick={handleUntap}>-Move to Battlefield</button>
+     <button className="hand-panel-btn" onClick={handleMoveToBattlefieldFlipped}>Move to Battlefield Flipped</button>
      <button className="hand-panel-btn" onClick={handleMoveToGraveyard}>Move to Graveyard</button>
      <button className="hand-panel-btn" onClick={handleMoveToExile}>Move to Exile</button>
      <button className="hand-panel-btn" onClick={handleSetStats}>-View Card</button>

@@ -20,6 +20,7 @@ interface SidebarProps {
     toggleExileViewer: () => void;
     resetHand: () => void; // <--- DODANY PROP DO OTWARCIA MODALA
     toggleTokenViewer: () => void;
+    toggleSideboardViewer: () => void;
 }
 
 export default function Sidebar({
@@ -39,6 +40,7 @@ export default function Sidebar({
     toggleExileViewer,
     resetHand, // <--- ODBIERAMY NOWY PROP
     toggleTokenViewer,
+    toggleSideboardViewer,
 }: SidebarProps) {
     return (
         <div className="sidebar">
@@ -69,6 +71,11 @@ export default function Sidebar({
             <button className="sidebar-button" onClick={toggleExileViewer}>
                 View Exile
             </button>
+
+            <button className="sidebar-button" onClick={toggleSideboardViewer}>
+                Sideboard
+            </button>
+            
             <button className="sidebar-button" onClick={() => shuffle(sessionCode, player.id)}>
                 Shuffle
             </button>
