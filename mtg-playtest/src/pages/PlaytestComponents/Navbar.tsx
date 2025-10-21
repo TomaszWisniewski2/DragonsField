@@ -104,9 +104,16 @@ export default function Navbar({
         >
           {session.players.findIndex((p) => p.id === player.id) + 1}: {player.name}
         </span>
+        <div>
+                <button className="nav-button" onClick={() => changeLife(session.code, player.id, player.life - 5)}>-5</button>
         <button className="nav-button" onClick={() => changeLife(session.code, player.id, player.life - 1)}>-</button>
+        </div>
         <span className={`nav-text player-life ${getPlayerColorClass(player.id)}`}>{player.life} HP</span>
+        <div>
         <button className="nav-button" onClick={() => changeLife(session.code, player.id, player.life + 1)}>+</button>
+        <button className="nav-button" onClick={() => changeLife(session.code, player.id, player.life + 5)}>+5</button>
+
+        </div>
 
 
 

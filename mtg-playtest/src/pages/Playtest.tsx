@@ -54,7 +54,20 @@ const {
 } = useSocket(import.meta.env.VITE_SERVER_URL || "http://localhost:3001");
 
 const navigate = useNavigate();
-const [playerName, setPlayerName] = useState("");
+const [playerName, setPlayerName] = useState(() => {
+  // Funkcja uruchamiana tylko raz podczas inicjalizacji
+  if (typeof window !== 'undefined') { // Sprawdzenie, czy kod jest po stronie klienta
+    const savedName = localStorage.getItem("playerName");
+    return savedName || ""; // Zwróć zapisane imię lub pusty ciąg
+  }
+  return "";
+});
+// ZAPISYWANIE IMIENIA GRACZA DO LOCALSTORAGE PRZY KAŻDEJ ZMIANIE
+useEffect(() => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem("playerName", playerName);
+  }
+}, [playerName]); // Uruchamiane za każdym razem, gdy playerName się zmieni
 const [zoom, setZoom] = useState(100);
 const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 const [viewedPlayerId, setViewedPlayerId] = useState<string | null>(null);

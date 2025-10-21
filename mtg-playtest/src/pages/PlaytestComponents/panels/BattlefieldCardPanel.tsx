@@ -222,6 +222,7 @@ export const BattlefieldCardPanel: React.FC<BattlefieldCardPanelProps> = ({
             <hr style={{ borderColor: '#444', margin: '2px 0' }} />
 
             <button className="hand-panel-btn" onClick={handleSetStatsClick}>Set P/T</button>
+            <button className="hand-panel-btn" onClick={() => onSetCardStats(0, 0)}>Reset P/T</button>
             <hr style={{ borderColor: '#444', margin: '2px 0' }} />
 
             <button className="hand-panel-btn" onClick={handleAddCounter}>Add Counter</button>
