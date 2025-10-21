@@ -436,22 +436,29 @@ export function useDeckManager(): DeckManagerHook {
                 }
 
                 // 3. Najprostszy Fallback: Wyszukiwanie tylko po samej nazwie karty
-                if (!data) {
-                    const bareMatch = line.match(bareNameLineRegex);
-                    if (bareMatch) {
-                        const countMatchLength = countMatch[0].length;
-                        const namePart = line.substring(countMatchLength).trim();
-                        const justName = namePart.split(/\s+/)[0]; 
+if (!data) {
+    const bareMatch = line.match(bareNameLineRegex);
+    if (bareMatch) {
+        let namePart = bareMatch[2].trim(); // np. "Mountain (EOE) 265 *F*"
 
-                        if (justName) {
-                            try {
-                                data = await getCardByName(justName);
-                            } catch (error) {
-                                console.error(`Nie udało się pobrać karty (Tylko Nazwa): ${line}. Błąd: ${error}`);
-                            }
-                        }
-                    }
-                }
+        // Usunięcie wszystkich niepożądanych znaczników, które Scryfall może zinterpretować źle.
+        // Usuwa (SET), NUMER, *F*
+        namePart = namePart.replace(/\s+\(.*?\)/g, '') // Usuń (SET)
+                           .replace(/\s+[A-Z0-9\-\\/]+(?=\s|$)/g, '') // Usuń NUMER
+                           .replace(/\s+\*?[FNG]+\*?$/i, '') // Usuń *F* / *NF*
+                           .trim();
+        
+        // Z "Mountain (EOE) 265 *F*" pozostanie tylko "Mountain"
+
+        if (namePart) {
+            try {
+                data = await getCardByName(namePart); 
+            } catch (error) {
+                console.error(`Nie udało się pobrać karty (Tylko Nazwa - oczyszczona): ${line}. Błąd: ${error}`);
+            }
+        }
+    }
+}
 
                 if (!data) {
                     console.error(`Ostatecznie nie udało się pobrać danych dla linii: ${line}`);
