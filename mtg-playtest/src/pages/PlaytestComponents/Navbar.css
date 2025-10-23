@@ -45,13 +45,15 @@
 }
 
 .other-player-info {
-  display: flex;
-  align-items: center;
-  padding: 5px 10px;
-  border-radius: 5px;
-  cursor: pointer;
-  border: 1px solid transparent;
-  transition: background-color 0.2s, border-color 0.2s;
+ display: flex;
+ align-items: center;
+ padding: 5px 10px;
+ border-radius: 5px;
+ cursor: pointer;
+ border: 1px solid transparent;
+ transition: background-color 0.2s, border-color 0.2s;
+ /* NOWA ZMIANA: Dodanie pozycjonowania kontekstowego */
+ position: relative; 
 }
 
 .other-player-info:hover {

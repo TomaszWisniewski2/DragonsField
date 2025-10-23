@@ -9,9 +9,15 @@ interface GraveyardViewerProps {
   toggleGraveyardViewer: () => void;
   // Dodajemy propa na klasę koloru, aby stylizować podgląd
   playerColorClass: string;
+  isOwned: boolean;
 }
 
-export default function GraveyardViewer({ player, toggleGraveyardViewer, playerColorClass }: GraveyardViewerProps) {
+export default function GraveyardViewer({ 
+  player,
+   toggleGraveyardViewer,
+    playerColorClass,
+    isOwned
+   }: GraveyardViewerProps) {
   const [hoveredCardImage, setHoveredCardImage] = useState<string | null>(
     player && player.graveyard.length > 0 ? player.graveyard[0].image || null : null
   );
@@ -19,7 +25,7 @@ export default function GraveyardViewer({ player, toggleGraveyardViewer, playerC
   const dragImageRef = useRef<HTMLImageElement>(null); // Nowy ref dla obrazu
 
   if (!player) return null;
-
+  const canDrag = isOwned;
   return (
     <div className={`library-viewer-overlay ${playerColorClass}`}> {/* Dodaj klasę koloru */}
       <div className="library-viewer-container">
@@ -49,6 +55,7 @@ export default function GraveyardViewer({ player, toggleGraveyardViewer, playerC
                   }
                 }}
                 onMouseEnter={() => setHoveredCardImage(card.image || null)}
+                className={!canDrag ? 'read-only-card' : ''}
               >
                 {card.name}
               </li>

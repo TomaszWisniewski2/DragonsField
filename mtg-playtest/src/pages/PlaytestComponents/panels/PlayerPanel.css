@@ -1,0 +1,70 @@
+/* src/components/Playtest/panels/PlayerPanel.css */
+
+.player-panel-floating {
+ position: absolute;
+ top: 119%; /* Ustawienie pod przyciskiem w Navbarze */
+ right: 0;  /* ZMIANA: Wyrównuje prawą krawędź panelu do prawej krawędzi kontenera nadrzędnego */
+ /* USUNIĘTO: left: 50%; */
+ /* USUNIĘTO: transform: translateX(-50%); */
+ 
+ z-index: 1000;
+ background-color: #222;
+ border: 1px solid var(--player-color);
+ /* border-top: none; */
+ border-radius: 0 0 4px 4px ;
+ box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+ min-width: 200px;
+ color: var(--player-color);
+}
+
+.player-panel-content {
+  padding: 10px;
+  position: relative;
+  color: var(--player-color);
+}
+
+.player-panel-close-btn {
+  position: absolute;
+  top: 2px;
+  right: 5px;
+  background: none;
+  border: none;
+  color: var(--player-color);
+  cursor: pointer;
+}
+
+.player-panel-header {
+  font-weight: bold;
+  margin-bottom: 8px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--player-color);
+  color: var(--player-color);
+}
+
+.player-panel-options-list button {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 5px;
+  background-color: #333;
+  color: white;
+  border: 1px solid var(--player-color);
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.2s;
+}
+
+.player-panel-options-list button:hover:not(:disabled) {
+  background-color: #444;
+}
+
+.player-panel-options-list button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+/* Dodanie klasy koloru na krawędź panelu, tak jak w Navbarze */
+.player-panel-floating.color-player-1 { border-color: var(--player-color-1); }
+.player-panel-floating.color-player-2 { border-color: var(--player-color-2); }
+.player-panel-floating.color-player-3 { border-color: var(--player-color-3); }
+.player-panel-floating.color-player-4 { border-color: var(--player-color-4); }

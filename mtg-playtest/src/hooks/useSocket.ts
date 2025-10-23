@@ -33,7 +33,6 @@ export const useSocket = (serverUrl: string) => {
 
     socket.on("connect", () => {
       setConnected(true);
-      // Sprawdzamy, czy socket.id istnieje przed ustawieniem stanu
       if (socket.id) {
         setPlayerId(socket.id);
       } else {
@@ -48,53 +47,44 @@ export const useSocket = (serverUrl: string) => {
       console.log("Rozłączono z serwerem Socket.io");
     });
 
-socket.on("updateState", (updatedSession: Session) => {
-            setSession(updatedSession);
-            console.log("Otrzymano aktualizację stanu sesji");
-            // --- LOGIKA ZBIERANIA UNIKALNYCH TOKENÓW (NA WYŚWIETLANIE) ---
+    socket.on("updateState", (updatedSession: Session) => {
+      setSession(updatedSession);
+      console.log("Otrzymano aktualizację stanu sesji");
+      // --- LOGIKA ZBIERANIA UNIKALNYCH TOKENÓW (NA WYŚWIETLANIE) ---
 
-            // 1. Zbieranie tokenów z kart gracza
-            // Używamy socket.id z domknięcia useEffect
-            const tokensFromDeck = updatedSession.players.find(p => p.id === socket.id)?.initialDeck
-                .flatMap(card => card.tokens || []) || [];
+      // Używamy socket.id z domknięcia useEffect
+      const tokensFromDeck = updatedSession.players.find(p => p.id === socket.id)?.initialDeck
+        .flatMap(card => card.tokens || []) || [];
 
-            // 2. Zbieranie tokenów z globalnego localStorage (tokenList)
-            let tokensFromLocalStorage: TokenData[] = [];
-            try {
-                const savedTokens = localStorage.getItem("tokenList");
-                if (savedTokens) {
-                    tokensFromLocalStorage = JSON.parse(savedTokens) as TokenData[];
-                }
-            } catch (e) {
-                console.error("Błąd parsowania tokenList z localStorage:", e);
-                // Kontynuujemy, używając tylko tokenów z talii
-            }
+      let tokensFromLocalStorage: TokenData[] = [];
+      try {
+        const savedTokens = localStorage.getItem("tokenList");
+        if (savedTokens) {
+          tokensFromLocalStorage = JSON.parse(savedTokens) as TokenData[];
+        }
+      } catch (e) {
+        console.error("Błąd parsowania tokenList z localStorage:", e);
+      }
 
-            // 3. Łączenie i usuwanie duplikatów
-            const allTokens = [...tokensFromDeck, ...tokensFromLocalStorage];
+      const allTokens = [...tokensFromDeck, ...tokensFromLocalStorage];
 
-            const uniqueTokens = allTokens
-                .filter((token, index, self) =>
-                    // Filtrowanie, aby zachować tylko unikalne tokeny
-                    index === self.findIndex((t) => (
-                        // Używamy kombinacji nazwy, mocy i wytrzymałości jako klucza unikalności
-                        t.name === token.name &&
-                        t.basePower === token.basePower &&
-                        t.baseToughness === token.baseToughness
-                    ))
-                );
+      const uniqueTokens = allTokens
+        .filter((token, index, self) =>
+          index === self.findIndex((t) => (
+            t.name === token.name &&
+            t.basePower === token.basePower &&
+            t.baseToughness === token.baseToughness
+          ))
+        );
 
-            // 4. ✅ OPTYMALIZACJA: Ustawienie listy dostępnych tokenów TYLKO, jeśli lista się ZMIENIŁA
-            // Zapobiega to niepotrzebnym re-renderom w komponentach TokenViewer,
-            // co zmniejsza ryzyko render loopów i przeciążenia pamięci.
-            if (JSON.stringify(allAvailableTokens) !== JSON.stringify(uniqueTokens)) {
-                setAllAvailableTokens(uniqueTokens);
-            }
+      // 4. ✅ OPTYMALIZACJA: Ustawienie listy dostępnych tokenów TYLKO, jeśli lista się ZMIENIŁA
+      // Wymaga allAvailableTokens w tablicy zależności useEffect
+      if (JSON.stringify(allAvailableTokens) !== JSON.stringify(uniqueTokens)) {
+        setAllAvailableTokens(uniqueTokens);
+      }
 
-            // -----------------------------------------------------------------
-        });
-
-     // --- NOWA FUNKCJA DO TWORZENIA TOKENÓW NA POLU BITWY ---
+      // -----------------------------------------------------------------
+    });
 
     // NOWE NASŁUCHIWANIE NA STATYSTYKI
     socket.on("updateSessionStats", (stats: SessionStats) => {
@@ -110,7 +100,8 @@ socket.on("updateState", (updatedSession: Session) => {
     return () => {
       socket.disconnect();
     };
-  }, [serverUrl]);
+    // ZMIANA TUTAJ: Dodanie allAvailableTokens do zależności
+  }, [serverUrl, allAvailableTokens]);
 
   const emitEvent = useCallback(
     <T>(eventName: string, payload: T) => {
