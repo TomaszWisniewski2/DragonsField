@@ -183,36 +183,28 @@ const openCommanderViewerForPlayer = (pId: string) => {
 
 
 const handleJoinSession = (code: string, sessionType: SessionType) => {
-    // Sprawdzenie, czy jesteśmy połączeni (chociaż samo emitEvent to sprawdza)
-    if (!connected) { 
-        alert("Nie połączono z serwerem. Spróbuj ponownie za chwilę.");
-        return;
-    }
-    
-    const savedDeck = localStorage.getItem("currentDeck");
-    const deck: CardType[] = savedDeck ? JSON.parse(savedDeck) : [];
+const savedDeck = localStorage.getItem("currentDeck");
+const deck: CardType[] = savedDeck ? JSON.parse(savedDeck) : [];
 
-    const savedSideboard = localStorage.getItem("currentSideboard");
-    const sideboard: CardType[] = savedSideboard ? JSON.parse(savedSideboard) : [];
+const savedSideboard = localStorage.getItem("currentSideboard");
+const sideboard: CardType[] = savedSideboard ? JSON.parse(savedSideboard) : [];
 
-    if (!playerName) {
-        alert("Nazwa gracza nie może być pusta.");
-        return;
-    }
+if (!playerName) {
+alert("Nazwa gracza nie może być pusta.");
+return;
+}
 
-    if (deck.length === 0) {
-        alert("Talia jest pusta! Zbuduj talię w Deck Managerze.");
-        return;
-    }
+if (deck.length === 0) {
+alert("Talia jest pusta! Zbuduj talię w Deck Managerze.");
+return;
+}
 
-    // Ten warunek jest nadmiarowy, bo sprawdzenie deck.length === 0 już to załatwia, 
-    // chyba że chodzi o konkretną kartę dowódcy, ale serwer to weryfikuje.
-    if (sessionType === "commander" && deck.length === 0) {
-        alert("W trybie Commander talia musi zawierać kartę dowódcy.");
-        return;
-    }
+if (sessionType === "commander" && deck.length === 0) {
+alert("W trybie Commander talia musi zawierać kartę dowódcy.");
+return;
+}
 
-    joinSession(code, playerName, deck, sessionType, sideboard);
+joinSession(code, playerName, deck, sessionType,sideboard);
 };
 
 const handleShuffle = () => {

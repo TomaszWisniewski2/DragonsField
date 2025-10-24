@@ -27,81 +27,84 @@ export const useSocket = (serverUrl: string) => {
   const [allAvailableTokens, setAllAvailableTokens] = useState<TokenData[]>([]);
   const socketRef = useRef<Socket | null>(null);
 
-  useEffect(() => {
-    const socket = io(serverUrl);
-    socketRef.current = socket;
+useEffect(() => {
+  const socket = io(serverUrl);
+  socketRef.current = socket;
 
-    socket.on("connect", () => {
-      setConnected(true);
-      if (socket.id) {
-        setPlayerId(socket.id);
-      } else {
-        setPlayerId(null);
-      }
-      console.log("Połączono z serwerem Socket.io");
-    });
+  socket.on("connect", () => {
+   setConnected(true);
+   if (socket.id) {
+    setPlayerId(socket.id);
+   } else {
+    setPlayerId(null);
+   }
+   console.log("Połączono z serwerem Socket.io");
+  });
 
-    socket.on("disconnect", () => {
-      setConnected(false);
-      setSession(null);
-      console.log("Rozłączono z serwerem Socket.io");
-    });
+  socket.on("disconnect", () => {
+   setConnected(false);
+   setSession(null);
+   console.log("Rozłączono z serwerem Socket.io");
+  });
 
-    socket.on("updateState", (updatedSession: Session) => {
-      setSession(updatedSession);
-      console.log("Otrzymano aktualizację stanu sesji");
-      // --- LOGIKA ZBIERANIA UNIKALNYCH TOKENÓW (NA WYŚWIETLANIE) ---
+  socket.on("updateState", (updatedSession: Session) => {
+   setSession(updatedSession);
+   console.log("Otrzymano aktualizację stanu sesji");
+   // --- LOGIKA ZBIERANIA UNIKALNYCH TOKENÓW (NA WYŚWIETLANIE) ---
 
-      // Używamy socket.id z domknięcia useEffect
-      const tokensFromDeck = updatedSession.players.find(p => p.id === socket.id)?.initialDeck
-        .flatMap(card => card.tokens || []) || [];
+   // Używamy socket.id z domknięcia useEffect
+   const tokensFromDeck = updatedSession.players.find(p => p.id === socket.id)?.initialDeck
+    .flatMap(card => card.tokens || []) || [];
 
-      let tokensFromLocalStorage: TokenData[] = [];
-      try {
-        const savedTokens = localStorage.getItem("tokenList");
-        if (savedTokens) {
-          tokensFromLocalStorage = JSON.parse(savedTokens) as TokenData[];
-        }
-      } catch (e) {
-        console.error("Błąd parsowania tokenList z localStorage:", e);
-      }
+   let tokensFromLocalStorage: TokenData[] = [];
+   try {
+    const savedTokens = localStorage.getItem("tokenList");
+    if (savedTokens) {
+     tokensFromLocalStorage = JSON.parse(savedTokens) as TokenData[];
+    }
+   } catch (e) {
+    console.error("Błąd parsowania tokenList z localStorage:", e);
+   }
 
-      const allTokens = [...tokensFromDeck, ...tokensFromLocalStorage];
+   const allTokens = [...tokensFromDeck, ...tokensFromLocalStorage];
 
-      const uniqueTokens = allTokens
-        .filter((token, index, self) =>
-          index === self.findIndex((t) => (
-            t.name === token.name &&
-            t.basePower === token.basePower &&
-            t.baseToughness === token.baseToughness
-          ))
-        );
+   const uniqueTokens = allTokens
+    .filter((token, index, self) =>
+     index === self.findIndex((t) => (
+      t.name === token.name &&
+      t.basePower === token.basePower &&
+      t.baseToughness === token.baseToughness
+     ))
+    );
 
-      // 4. ✅ OPTYMALIZACJA: Ustawienie listy dostępnych tokenów TYLKO, jeśli lista się ZMIENIŁA
-      // Wymaga allAvailableTokens w tablicy zależności useEffect
-      if (JSON.stringify(allAvailableTokens) !== JSON.stringify(uniqueTokens)) {
-        setAllAvailableTokens(uniqueTokens);
-      }
+   // 4. NAPRAWIONA OPTYMALIZACJA: Użycie funkcji aktualizującej stan
+   setAllAvailableTokens(prevTokens => {
+    // Porównanie przez JSON.stringify aby sprawdzić, czy dane się rzeczywiście zmieniły
+    if (JSON.stringify(prevTokens) !== JSON.stringify(uniqueTokens)) {
+     return uniqueTokens;
+    }
+    return prevTokens; // Zwróć poprzedni stan, jeśli nie ma zmian
+   });
 
-      // -----------------------------------------------------------------
-    });
+   // -----------------------------------------------------------------
+  });
 
-    // NOWE NASŁUCHIWANIE NA STATYSTYKI
-    socket.on("updateSessionStats", (stats: SessionStats) => {
-      setAllSessionStats(stats);
-      console.log("Otrzymano aktualne statystyki sesji:", stats);
-    });
+  // NOWE NASŁUCHIWANIE NA STATYSTYKI
+  socket.on("updateSessionStats", (stats: SessionStats) => {
+   setAllSessionStats(stats);
+   console.log("Otrzymano aktualne statystyki sesji:", stats);
+  });
 
-    socket.on("error", (message: string) => {
-      console.error("Błąd serwera:", message);
-      alert(message);
-    });
+  socket.on("error", (message: string) => {
+   console.error("Błąd serwera:", message);
+   alert(message);
+  });
 
-    return () => {
-      socket.disconnect();
-    };
-    // ZMIANA TUTAJ: Dodanie allAvailableTokens do zależności
-  }, [serverUrl, allAvailableTokens]);
+  return () => {
+   socket.disconnect();
+  };
+  // ZMIANA TUTAJ: Usunięcie allAvailableTokens z zależności, by uniknąć pętli
+ }, [serverUrl]);
 
   const emitEvent = useCallback(
     <T>(eventName: string, payload: T) => {
@@ -342,6 +345,8 @@ const moveCard = useCallback(
     },
     [emitEvent]
   );
+
+  
 
   return {
     connected,
