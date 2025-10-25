@@ -10,6 +10,130 @@ import type { ScryfallCardData} from "./DeckManagerComponents/DeckTypes";
 // ----------------------------------------------------------------------
 const MISSING_IMAGE_URL = "https://assets.moxfield.net/assets/images/missing-image.png";
 
+export const STATIC_TOKENS: CardType[] = [
+    // ----------------------------------------------------------------------
+    // 1. Treasure (Jednostronny)
+    { 
+        id: "static-treasure", 
+        name: "Treasure", 
+        type_line: "Artifact Token", 
+        image: "https://cards.scryfall.io/large/front/b/b/bbe8bced-9524-47f6-a600-bf4ddc072698.jpg?1562539795", 
+        basePower: null, baseToughness: null, 
+        mana_value: 0, mana_cost: undefined,
+        
+        hasSecondFace: false,
+    },
+    // ----------------------------------------------------------------------
+    // 2. Start Your Engines! (Jednostronny Marker/Karta)
+    // UWAGA: Mimo że nie jest to oficjalny token statusu, definiujemy go jako CardType.
+    { 
+        id: "static-start-engines", 
+        name: "Start Your Engines!", 
+        type_line: "Status Marker", 
+        image: "https://cards.scryfall.io/large/front/8/2/82613de6-ed37-48c1-8d2f-d91a3f496794.jpg?1739184127", 
+        basePower: null, baseToughness: null, 
+        mana_value: 0, mana_cost: undefined,
+        
+        hasSecondFace: false,
+    },
+    // ----------------------------------------------------------------------
+    // 3. The Ring (Jednostronny Status)
+    { 
+        id: "static-the-ring", 
+        name: "The Ring", 
+        type_line: "Status Token", 
+        image: "https://cards.scryfall.io/large/front/7/2/7215460e-8c06-47d0-94e5-d1832d0218af.jpg?1742651318", 
+        basePower: null, baseToughness: null, 
+        mana_value: 0, mana_cost: undefined,
+        
+        hasSecondFace: false,
+    },
+    // ----------------------------------------------------------------------
+    // 4. Day/Night (Dwustronny Status)
+    { 
+        id: "static-daynight", 
+        name: "Day", 
+        type_line: "Status Token", 
+        image: "https://cards.scryfall.io/large/front/9/c/9c0f7843-4cbb-4d0f-8887-ec823a9238da.jpg?1644880530", 
+        basePower: null, baseToughness: null, 
+        mana_value: 0, mana_cost: undefined,
+
+        hasSecondFace: true, 
+        secondFaceName: "Night",
+        // Rewers (Night) używa tej samej karty, zmieniając 'front' na 'back'
+        secondFaceImage: "https://cards.scryfall.io/large/back/9/c/9c0f7843-4cbb-4d0f-8887-ec823a9238da.jpg?1644880530", 
+        secondFaceManaValue: 0,
+        secondFaceTypeLine: "Status Token",
+    },
+    // ----------------------------------------------------------------------
+    // 5. City's Blessing (Jednostronny Status)
+    { 
+        id: "static-city-blessing", 
+        name: "City's Blessing", 
+        type_line: "Status Token", 
+        image: "https://cards.scryfall.io/large/front/b/a/ba64ed3e-93c5-406f-a38d-65cc68472122.jpg?1691108010", 
+        basePower: null, baseToughness: null, 
+        mana_value: 0, mana_cost: undefined,
+        
+        hasSecondFace: false,
+    },
+    // ----------------------------------------------------------------------
+    // 6. The Monarch (Jednostronny Status)
+    { 
+        id: "static-the-monarch", 
+        name: "The Monarch", 
+        type_line: "Status Token", 
+        image: "https://cards.scryfall.io/large/front/4/0/40b79918-22a7-4fff-82a6-8ebfe6e87185.jpg?1680498245", 
+        basePower: null, baseToughness: null, 
+        mana_value: 0, mana_cost: undefined,
+        
+        hasSecondFace: false,
+    },
+    // ----------------------------------------------------------------------
+    // 7. The Initiative (Dwustronny Status/Dungeon)
+    { 
+        id: "static-initiative", 
+        name: "The Initiative", 
+        type_line: "Status Token", 
+        // Awers - sam status 'The Initiative'
+        image: "https://cards.scryfall.io/large/front/2/c/2c65185b-6cf0-451d-985e-56aa45d9a57d.jpg?1707897435", 
+        basePower: null, baseToughness: null, 
+        mana_value: 0, mana_cost: undefined,
+        
+        hasSecondFace: true, 
+        secondFaceName: "The Undercity",
+        // Rewers - Dungeony The Undercity
+        secondFaceImage: "https://cards.scryfall.io/large/back/2/c/2c65185b-6cf0-451d-985e-56aa45d9a57d.jpg?1707897435", 
+        secondFaceManaValue: 0,
+        secondFaceTypeLine: "Dungeon",
+    },
+    // ----------------------------------------------------------------------
+    // 8. Foretell (Jednostronny Status)
+    { 
+        id: "static-foretell", 
+        name: "Foretell", 
+        type_line: "Status Token", 
+        image: "https://cards.scryfall.io/large/front/f/b/fb02637f-1385-4d3d-8dc0-de513db7633a.jpg?1615690969", 
+        basePower: null, baseToughness: null, 
+        mana_value: 0, mana_cost: undefined,
+        
+        hasSecondFace: false,
+    },
+];
+
+function mapCardToToken(card: CardType): TokenData {
+    return {
+        name: card.name,
+        // 💡 Poprawka: Zapewnienie, że type_line jest zawsze stringiem.
+        type_line: card.type_line || 'Token', 
+        
+        basePower: card.basePower,
+        baseToughness: card.baseToughness,
+        image: card.image,
+        mana_value: card.mana_value,
+        mana_cost: card.mana_cost,
+    };
+}
 // ----------------------------------------------------------------------
 // 2. FUNKCJE POMOCNICZE (MOŻNA JE WYEKSPORTOWAĆ LUB POZOSTAWIĆ W PLIKU)
 // ----------------------------------------------------------------------
@@ -197,13 +321,28 @@ export function useDeckManager(): DeckManagerHook {
     const [tokenList, setTokenList] = useState<TokenData[]>(
         () => {
             try {
-                const savedTokens = localStorage.getItem("tokenList");
-                return savedTokens ? JSON.parse(savedTokens) : [];
+                // Konwersja zapisanych danych (które są TokenData[])
+                const savedTokens: TokenData[] = JSON.parse(localStorage.getItem("tokenList") || "[]");
+                
+                const uniqueTokensMap = new Map<string, TokenData>();
+                savedTokens.forEach(t => uniqueTokensMap.set(t.name, t));
+
+                // Musimy przekonwertować STATIC_TOKENS (CardType[]) na TokenData[] przed dodaniem do Mapy
+                STATIC_TOKENS.forEach(card => {
+                    const token = mapCardToToken(card); // Konwersja CardType -> TokenData
+                    if (!uniqueTokensMap.has(token.name)) {
+                        uniqueTokensMap.set(token.name, token);
+                    }
+                });
+                
+                return Array.from(uniqueTokensMap.values());
             } catch {
-                return [];
+                // W przypadku błędu parsowania, zwróć tylko listę statyczną po konwersji
+                return STATIC_TOKENS.map(mapCardToToken); 
             }
         }
     );
+
     const [loading, setLoading] = useState(false);
     const [bulkText, setBulkText] = useState("");
 
@@ -231,19 +370,25 @@ export function useDeckManager(): DeckManagerHook {
     /**
      * Funkcja do czyszczenia listy tokenów i ponownego skanowania talii.
      */
-    const recomputeTokenList = useCallback(() => {
+const recomputeTokenList = useCallback(() => {
+        // 1. Zacznij od listy stałych tokenów
         const uniqueTokensMap = new Map<string, TokenData>();
+        STATIC_TOKENS.forEach(card => {
+            const token = mapCardToToken(card); // Konwersja CardType -> TokenData
+            uniqueTokensMap.set(token.name, token);
+        });
 
-        // Skanowanie głównej talii i sideboardu
+        // 2. Skanowanie głównej talii i sideboardu
         [...deck, ...sideboard].forEach(card => {
             card.tokens?.forEach(token => {
+                // Dodaj token tylko jeśli jego nazwa nie została jeszcze dodana (z listy statycznej lub innej karty)
                 if (!uniqueTokensMap.has(token.name)) {
                     uniqueTokensMap.set(token.name, token);
                 }
             });
         });
         setTokenList(Array.from(uniqueTokensMap.values()));
-    }, [deck, sideboard]); 
+    }, [deck, sideboard]);
 
     // ----------------------------------------------------------------------
     // SIDE EFFECTS (useEffect)

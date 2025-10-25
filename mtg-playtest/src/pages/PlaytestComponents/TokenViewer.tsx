@@ -1,16 +1,17 @@
-// src/pages/PlaytestComponents/TokenViewer.tsx
+// src/pages/PlaytestComponents/TokenViewer.tsx (Zaktualizowany)
 
 import { useState, useRef } from "react";
-// Usunięto Player z importu, ponieważ nie jest potrzebny
-import type { TokenData } from "../../components/types"; 
-import "./LibraryViewer.css"; 
+import type { TokenData } from "../../components/types";
+import "./LibraryViewer.css";
+// IMPORTUJEMY NOWY KOMPONENT MODALU
+import CreateTokenModal from "./CreateTokenModal"; 
 
 interface TokenViewerProps {
     // Lista wszystkich unikalnych tokenów
     allAvailableTokens: TokenData[]; 
     toggleTokenViewer: () => void;
     playerColorClass: string;
-    // Przywrócenie funkcji do wywołania emisji eventu 'createToken' na serwerze
+    // Funkcja do wywołania emisji eventu 'createToken' na serwerze
     onCreateToken: (tokenData: TokenData) => void; 
 }
 
@@ -18,25 +19,20 @@ export default function TokenViewer({
     allAvailableTokens, 
     toggleTokenViewer, 
     playerColorClass,
-    onCreateToken, // PRZYWRÓCONY PROP
+    onCreateToken,
 }: TokenViewerProps) {
     const [filterText, setFilterText] = useState("");
     const dragImageRef = useRef<HTMLImageElement>(null);
+    // NOWY STAN DLA MODALA TWORZENIA TOKENU
+    const [isCreateTokenModalOpen, setIsCreateTokenModalOpen] = useState(false);
 
-    // ----------------------------------------------------------------------
-    // LOGIKA FILTROWANIA i SORTOWANIA (Musi być przed inicjalizacją stanu podglądu)
-    // ----------------------------------------------------------------------
     const filteredTokens = allAvailableTokens
         .filter(token => 
             token.name.toLowerCase().includes(filterText.toLowerCase()) || 
             (token.type_line && token.type_line.toLowerCase().includes(filterText.toLowerCase()))
         )
-        // Sortowanie alfabetyczne dla porządku (jak w LibraryViewer)
         .sort((a, b) => a.name.localeCompare(b.name));
-    // ----------------------------------------------------------------------
     
-    // ZMIANA: Inicjalizacja stanu podglądu odbywa się na podstawie 
-    // POSORTOWANEJ i PRZEFILTROWANEJ listy, aby była spójna z listą renderowaną.
     const [hoveredTokenImage, setHoveredTokenImage] = useState<string | null>(
         filteredTokens.length > 0 ? filteredTokens[0].image || null : null
     );
@@ -46,7 +42,10 @@ export default function TokenViewer({
             <div className="library-viewer-container">
                 <div className="library-viewer-header">
                     <span>Viewing Tokens ({filteredTokens.length} of {allAvailableTokens.length})</span>
-                    <button onClick={toggleTokenViewer}>Close</button>
+                    <div>
+
+                        <button onClick={toggleTokenViewer}>Close</button>
+                    </div>
                 </div>
                 <div className="library-viewer-content">
                     <div className="card-image-preview">
@@ -56,31 +55,24 @@ export default function TokenViewer({
                     <ul className="card-list">
                         {filteredTokens.map((token, index) => (
                             <li
-                                // Poprawiony klucz, użyjemy nazwy + indeksu,
-                                // ponieważ wiele kart może generować ten sam token
                                 key={`${token.name}-${token.basePower}-${index}`} 
                                 draggable
-                                // Używamy onDoubleClick do szybkiego utworzenia tokenu na polu
                                 onDoubleClick={() => onCreateToken(token)} 
                                 onDragStart={(e) => {
-                                    // Ustawiamy dane do przeciągania
                                     e.dataTransfer.setData("isToken", "true");
                                     e.dataTransfer.setData("tokenData", JSON.stringify(token));
                                     e.dataTransfer.setData("from", "token"); 
 
-                                    // Ustawienie obrazu do przeciągania
                                     if (dragImageRef.current && token.image) {
                                         dragImageRef.current.src = token.image;
                                         e.dataTransfer.setDragImage(dragImageRef.current, 50, 70);
                                     } else {
-                                        // Użyj niewidocznego obrazu, jeśli obraz tokenu jest niedostępny
                                         e.dataTransfer.setDragImage(new Image(), 0, 0);
                                     }
                                 }}
                                 onMouseEnter={() => setHoveredTokenImage(token.image || null)}
                                 title={`${token.name} (${token.type_line})`}
                             >
-                                {/* Uproszczony widok, bardziej zbliżony do LibraryViewer */}
                                 <span style={{fontWeight: 'bold', marginRight: '5px'}}>{token.name}</span>
                                 {token.basePower && token.baseToughness && (
                                     <span style={{fontSize: '0.8em', opacity: 0.7}}> ({token.basePower}/{token.baseToughness})</span>
@@ -90,7 +82,16 @@ export default function TokenViewer({
                     </ul>
 
                 </div>
-                {/* Panel filtrowania przeniesiony na dół, jak w LibraryViewer */}
+                                    <div>
+                        {/* NOWY PRZYCISK "New Token" */}
+                        <button 
+                            className="sidebar-button"
+                            style={{ marginRight: '10px' }}
+                            onClick={() => setIsCreateTokenModalOpen(true)}
+                        >
+                            New Token
+                        </button>
+                    </div>
                 <div className="library-viewer-filter">
                     <input
                         type="text"
@@ -99,9 +100,16 @@ export default function TokenViewer({
                         onChange={(e) => setFilterText(e.target.value)}
                     />
                 </div>
-                {/* Ukryty obraz do przeciągania */}
                 <img ref={dragImageRef} className="drag-image-placeholder" alt="Drag Placeholder" />
             </div>
+
+            {/* WARUNKOWE RENDEROWANIE NOWEGO MODALA */}
+            {isCreateTokenModalOpen && (
+                <CreateTokenModal
+                    onClose={() => setIsCreateTokenModalOpen(false)}
+                    onCreateToken={onCreateToken}
+                />
+            )}
         </div>
     );
 }
