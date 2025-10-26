@@ -31,7 +31,7 @@ export default function TokenViewer({
             token.name.toLowerCase().includes(filterText.toLowerCase()) || 
             (token.type_line && token.type_line.toLowerCase().includes(filterText.toLowerCase()))
         )
-        .sort((a, b) => a.name.localeCompare(b.name));
+        
     
     const [hoveredTokenImage, setHoveredTokenImage] = useState<string | null>(
         filteredTokens.length > 0 ? filteredTokens[0].image || null : null
@@ -52,34 +52,51 @@ export default function TokenViewer({
                         {hoveredTokenImage && <img src={hoveredTokenImage} alt="Token Preview" />}
                     </div>
 
-                    <ul className="card-list">
-                        {filteredTokens.map((token, index) => (
-                            <li
-                                key={`${token.name}-${token.basePower}-${index}`} 
-                                draggable
-                                onDoubleClick={() => onCreateToken(token)} 
-                                onDragStart={(e) => {
-                                    e.dataTransfer.setData("isToken", "true");
-                                    e.dataTransfer.setData("tokenData", JSON.stringify(token));
-                                    e.dataTransfer.setData("from", "token"); 
+<ul className="card-list">
+    {filteredTokens.map((token, index) => {
+        const items: React.ReactNode[] = [];
 
-                                    if (dragImageRef.current && token.image) {
-                                        dragImageRef.current.src = token.image;
-                                        e.dataTransfer.setDragImage(dragImageRef.current, 50, 70);
-                                    } else {
-                                        e.dataTransfer.setDragImage(new Image(), 0, 0);
-                                    }
-                                }}
-                                onMouseEnter={() => setHoveredTokenImage(token.image || null)}
-                                title={`${token.name} (${token.type_line})`}
-                            >
-                                <span style={{fontWeight: 'bold', marginRight: '5px'}}>{token.name}</span>
-                                {token.basePower && token.baseToughness && (
-                                    <span style={{fontSize: '0.8em', opacity: 0.7}}> ({token.basePower}/{token.baseToughness})</span>
-                                )}
-                            </li>
-                        ))}
-                    </ul>
+        // Normalny token
+        items.push(
+            <li
+                key={`${token.name}-${token.basePower}-${index}`} 
+                draggable
+                onDoubleClick={() => onCreateToken(token)} 
+                onDragStart={(e) => {
+                    e.dataTransfer.setData("isToken", "true");
+                    e.dataTransfer.setData("tokenData", JSON.stringify(token));
+                    e.dataTransfer.setData("from", "token"); 
+
+                    if (dragImageRef.current && token.image) {
+                        dragImageRef.current.src = token.image;
+                        e.dataTransfer.setDragImage(dragImageRef.current, 50, 70);
+                    } else {
+                        e.dataTransfer.setDragImage(new Image(), 0, 0);
+                    }
+                }}
+                onMouseEnter={() => setHoveredTokenImage(token.image || null)}
+                title={`${token.name} (${token.type_line})`}
+            >
+                <span style={{fontWeight: 'bold', marginRight: '5px'}}>{token.name}</span>
+                {token.basePower && token.baseToughness && (
+                    <span style={{fontSize: '0.8em', opacity: 0.7}}> ({token.basePower}/{token.baseToughness})</span>
+                )}
+            </li>
+        );
+
+        // Separator po Treasure
+        if (token.name === "Treasure") {
+            items.push(
+                <li key={`separator-${index}`} className="token-separator">
+                    <hr />
+                </li>
+            );
+        }
+
+        return items;
+    })}
+</ul>
+
 
                 </div>
                                     <div>

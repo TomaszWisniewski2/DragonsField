@@ -1,5 +1,5 @@
 // useDeckManager.ts
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 // Importy z DeckManager.tsx
 import { getCardByName, getCardImageUrl, getCardByURI, getCardBySetAndNumber } from "../api/scryfall";
 import type { CardType, TokenData } from "../components/types";
@@ -142,34 +142,60 @@ function mapCardToToken(card: CardType): TokenData {
  * Asynchroniczna funkcja do pobierania szczegółowych danych tokenów
  * na podstawie URI z pola all_parts.
  */
-async function getTokensData(data: ScryfallCardData): Promise<TokenData[] | undefined> {
-    if (!data.all_parts) return undefined;
+export async function getTokensData(data: ScryfallCardData): Promise<TokenData[]> {
+    // Brak powiązanych części = brak tokenów/emblematów
+    if (!data.all_parts) return [];
 
+    //console.log("All parts:", data.all_parts);
+    // Pobieramy tokeny i emblematy z all_parts
     const tokenUris = data.all_parts
-        .filter(part => part.component === 'token')
-        .map(token => token.uri);
+        .filter(
+            part =>
+                part.component === "token" ||
+                part.type_line?.toLowerCase().includes("emblem")
+        )
+        .map(part => part.uri);
 
-    if (tokenUris.length === 0) return undefined;
+    // Jeśli nic nie znaleziono – kończymy
+    if (tokenUris.length === 0) return [];
 
-    try {
-        const tokenDataPromises = tokenUris.map(uri => getCardByURI(uri));
-        const rawTokensData = await Promise.all(tokenDataPromises);
+    // Pobieramy wszystkie dane tokenów/emblematów
+    const rawTokensData = await Promise.all(
+        tokenUris.map(async (uri) => {
+            try {
+                const tokenData = await getCardByURI(uri);
+                return tokenData;
+            } catch (e) {
+                console.warn("Błąd pobierania tokenu/emblemu z Scryfall:", e);
+                return null;
+            }
+        })
+    );
 
-        const tokens: TokenData[] = rawTokensData.map(tokenData => ({
-            name: tokenData.name,
-            type_line: tokenData.type_line || '',
-            basePower: (tokenData.power === "*" ? "0" : tokenData.power) || null,
-            baseToughness: (tokenData.toughness === "*" ? "0" : tokenData.toughness) || null,
-            image: getCardImageUrl(tokenData) || undefined,
-            mana_value: tokenData.cmc,
-            mana_cost: tokenData.mana_cost,
-        }));
+    // Mapujemy dane na nasz wewnętrzny format TokenData
+    const tokens: TokenData[] = rawTokensData
+        .filter((t): t is ScryfallCardData => t !== null)
+        .map((tokenData) => {
+            const isEmblem = tokenData.type_line?.toLowerCase().includes("emblem");
 
-        return tokens;
-    } catch (error) {
-        console.error("Błąd podczas pobierania danych tokenów:", error);
-        return undefined;
-    }
+            return {
+                name: tokenData.name,
+                type_line: isEmblem ? "Emblem" : (tokenData.type_line || ""),
+                basePower:
+                    tokenData.power === "*"
+                        ? "0"
+                        : tokenData.power ?? null,
+                baseToughness:
+                    tokenData.toughness === "*"
+                        ? "0"
+                        : tokenData.toughness ?? null,
+                image: getCardImageUrl(tokenData) ?? undefined,
+                mana_value: tokenData.cmc,
+                mana_cost: tokenData.mana_cost,
+            };
+        });
+
+    return tokens;
 }
 
 
@@ -318,30 +344,22 @@ export function useDeckManager(): DeckManagerHook {
             }
         }
     );
-    const [tokenList, setTokenList] = useState<TokenData[]>(
-        () => {
-            try {
-                // Konwersja zapisanych danych (które są TokenData[])
-                const savedTokens: TokenData[] = JSON.parse(localStorage.getItem("tokenList") || "[]");
-                
-                const uniqueTokensMap = new Map<string, TokenData>();
-                savedTokens.forEach(t => uniqueTokensMap.set(t.name, t));
+const [staticTokens] = useState<TokenData[]>(STATIC_TOKENS.map(mapCardToToken));
 
-                // Musimy przekonwertować STATIC_TOKENS (CardType[]) na TokenData[] przed dodaniem do Mapy
-                STATIC_TOKENS.forEach(card => {
-                    const token = mapCardToToken(card); // Konwersja CardType -> TokenData
-                    if (!uniqueTokensMap.has(token.name)) {
-                        uniqueTokensMap.set(token.name, token);
-                    }
-                });
-                
-                return Array.from(uniqueTokensMap.values());
-            } catch {
-                // W przypadku błędu parsowania, zwróć tylko listę statyczną po konwersji
-                return STATIC_TOKENS.map(mapCardToToken); 
-            }
-        }
-    );
+// Dynamiczne tokeny (dodawane przez karty)
+const [dynamicTokens, setDynamicTokens] = useState<TokenData[]>(() => {
+    try {
+        const savedDynamic = JSON.parse(localStorage.getItem("dynamicTokens") || "[]");
+        return savedDynamic;
+    } catch {
+        return [];
+    }
+});
+
+// Dla zachowania kompatybilności — łączona lista (dynamiczne + statyczne)
+const tokenList = useMemo(() => {
+    return [...dynamicTokens, ...staticTokens];
+}, [dynamicTokens, staticTokens]);
 
     const [loading, setLoading] = useState(false);
     const [bulkText, setBulkText] = useState("");
@@ -353,42 +371,32 @@ export function useDeckManager(): DeckManagerHook {
     /**
      * Funkcja aktualizująca globalną listę tokenów.
      */
-    const updateTokenList = useCallback((newTokens: TokenData[] | undefined) => {
-        if (!newTokens || newTokens.length === 0) return;
+const updateTokenList = useCallback((newTokens: TokenData[] | undefined) => {
+    if (!newTokens || newTokens.length === 0) return;
 
-        setTokenList(prevList => {
-            const currentTokenNames = new Set(prevList.map(t => t.name));
-            const uniqueNewTokens = newTokens.filter(token => !currentTokenNames.has(token.name));
-
-            if (uniqueNewTokens.length > 0) {
-                return [...prevList, ...uniqueNewTokens];
-            }
-            return prevList;
-        });
-    }, []);
+    setDynamicTokens(prevList => {
+        const currentNames = new Set(prevList.map(t => t.name));
+        const uniqueNewTokens = newTokens.filter(t => !currentNames.has(t.name));
+        return uniqueNewTokens.length > 0 ? [...prevList, ...uniqueNewTokens] : prevList;
+    });
+}, []);
 
     /**
      * Funkcja do czyszczenia listy tokenów i ponownego skanowania talii.
      */
 const recomputeTokenList = useCallback(() => {
-        // 1. Zacznij od listy stałych tokenów
-        const uniqueTokensMap = new Map<string, TokenData>();
-        STATIC_TOKENS.forEach(card => {
-            const token = mapCardToToken(card); // Konwersja CardType -> TokenData
-            uniqueTokensMap.set(token.name, token);
-        });
+    const tokenMap = new Map<string, TokenData>();
 
-        // 2. Skanowanie głównej talii i sideboardu
-        [...deck, ...sideboard].forEach(card => {
-            card.tokens?.forEach(token => {
-                // Dodaj token tylko jeśli jego nazwa nie została jeszcze dodana (z listy statycznej lub innej karty)
-                if (!uniqueTokensMap.has(token.name)) {
-                    uniqueTokensMap.set(token.name, token);
-                }
-            });
+    [...deck, ...sideboard].forEach(card => {
+        card.tokens?.forEach(token => {
+            if (!tokenMap.has(token.name)) {
+                tokenMap.set(token.name, token);
+            }
         });
-        setTokenList(Array.from(uniqueTokensMap.values()));
-    }, [deck, sideboard]);
+    });
+
+    setDynamicTokens(Array.from(tokenMap.values()));
+}, [deck, sideboard]);
 
     // ----------------------------------------------------------------------
     // SIDE EFFECTS (useEffect)
@@ -420,6 +428,10 @@ const recomputeTokenList = useCallback(() => {
             localStorage.removeItem("commander");
         }
     }, [commander]);
+
+    useEffect(() => {
+    localStorage.setItem("dynamicTokens", JSON.stringify(dynamicTokens));
+}, [dynamicTokens]);
     
     // ----------------------------------------------------------------------
     // OBSŁUGA ZDARZEŃ (HANDLERY)
@@ -694,7 +706,7 @@ if (!data) {
             setDeck([]);
             setSideboard([]); 
             setCommander(null);
-            setTokenList([]);
+            setDynamicTokens([])
             setBulkText("");
             setQuery("");
             alert("Talia, Sideboard i cache kart zostały usunięte z pamięci lokalnej.");

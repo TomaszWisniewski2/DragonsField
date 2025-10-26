@@ -17,9 +17,9 @@ export interface TokenData {
 export interface CardType {
     id: string; // Unikalne ID kopii karty
     name: string;
-    image: string | undefined;
+    image?: string | undefined;
     mana_cost?: string;
-    mana_value: number;
+    mana_value?: number;
     type_line: string;
     basePower: string | null;
     baseToughness: string | null;
