@@ -1,14 +1,6 @@
-
-// Zakładam, że w pliku api/scryfall.ts masz funkcje:
-// getCardByName(name: string): Promise<ScryfallCardData>
-// getCardImageUrl(data: ScryfallCardData): string | null
-// ORAZ: getCardByURI(uri: string): Promise<ScryfallCardData>
-
 import "./DeckManager.css";
 // Importujemy CardType i TokenData z pliku types
 import type { CardType, TokenData } from "../components/types";
-
-
 import { useDeckManager } from "./useDeckManager";
 
 
@@ -16,11 +8,11 @@ import { useDeckManager } from "./useDeckManager";
 // KOMPONENT DECKMANAGER
 // ----------------------------------------------------------------------
 export default function DeckManager() {
-    // 💡 Używamy hooka, aby pobrać całą logikę i stany
+    // 💡 ZMIANA: commander jest teraz tablicą CardType[] zamiast CardType | null
     const {
         deck,
         sideboard,
-        commander,
+        commander, // Zmieniono z CardType | null na CardType[]
         tokenList,
         query,
         bulkText,
@@ -30,16 +22,17 @@ export default function DeckManager() {
         handleAddCard,
         handleRemoveCard,
         handleToggleCardLocation,
-        handleSetCommander,
-        handleRemoveCommander,
+        handleSetCommander, // Mimo nazwy, teraz dodaje/usuwa pojedynczą kartę z listy
+        handleRemoveCommander, // Teraz może usuwać pojedynczego commandera z listy
         handleBulkImport,
         handleClearStorage,
         calculateTotalManaValue,
     } = useDeckManager();
 
     const totalManaValue = calculateTotalManaValue();
-    //const totalCards = deck.length + sideboard.length;
-   
+
+    // Funkcja pomocnicza do sprawdzenia, czy karta jest commanderem
+    const isCommander = (card: CardType) => commander.some(c => c.id === card.id);
 
     return (
         <div className="deck-manager-container">
@@ -62,7 +55,7 @@ export default function DeckManager() {
                     Wyczyść całą talię i cache 🗑️
                 </button>
             </div>
-            
+
             <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid #444' }} />
 
             <p>Dodawaj karty do swojej talii:</p>
@@ -113,20 +106,28 @@ SIDEBOARD:
                 Importuj talię
             </button>
 
-            {/* Wyświetlanie informacji o commanderze */}
-            {commander && (
-                <div style={{ marginTop: "20px", padding: "10px", border: "2px solid gold", borderRadius: "8px", display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    {commander.image && (
-                        <img
-                            src={commander.image}
-                            alt={commander.name}
-                            style={{ width: '60px', borderRadius: '4px' }}
-                        />
-                    )}
-                    <h3 style={{ margin: 0 }}>Commander: {commander.name}</h3>
-                    <button onClick={handleRemoveCommander} style={{ background: 'transparent', color: 'red', border: 'none', cursor: 'pointer', fontSize: '1.2em' }}>
-                        &times;
-                    </button>
+            {/* Wyświetlanie informacji o commanderach - ZMIENIONO NA LISTĘ */}
+            {commander.length > 0 && (
+                <div style={{ marginTop: "20px", padding: "10px", border: "2px solid gold", borderRadius: "8px" }}>
+                    <h3 style={{ margin: 0, marginBottom: '10px' }}>Commander{commander.length > 1 ? 's' : ''}:</h3>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                        {commander.map((card) => (
+                            <div key={card.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: '#333', padding: '5px', borderRadius: '4px' }}>
+                                {card.image && (
+                                    <img
+                                        src={card.image}
+                                        alt={card.name}
+                                        style={{ width: '60px', borderRadius: '4px' }}
+                                    />
+                                )}
+                                <span style={{ fontWeight: 'bold' }}>{card.name}</span>
+                                {/* handleRemoveCommander usuwa daną kartę z listy commanderów */}
+                                <button onClick={() => handleRemoveCommander(card)} style={{ background: 'transparent', color: 'red', border: 'none', cursor: 'pointer', fontSize: '1.2em' }}>
+                                    &times;
+                                </button>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             )}
 
@@ -169,17 +170,18 @@ SIDEBOARD:
                     <CardDisplay
                         key={card.id}
                         card={card}
-                        commander={commander}
+                        isCommander={isCommander(card)} // Zmieniono na prosty boolean
                         isSideboard={false}
                         handleRemoveCard={handleRemoveCard}
                         handleSetCommander={handleSetCommander}
+                        handleRemoveCommander={handleRemoveCommander} // Przekazujemy, aby odznaczyć
                         handleToggleCardLocation={handleToggleCardLocation}
                     />
                 ))}
             </div>
-            
+
             <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid #444' }} />
-            
+
             {/* 💡 NOWA SEKCJA DLA SIDEBOARDU */}
             <h2 style={{ marginTop: "20px" }}>Sideboard ({sideboard.length} kart) 🩹</h2>
             <div className="sideboard-list" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
@@ -190,10 +192,11 @@ SIDEBOARD:
                         <CardDisplay
                             key={card.id}
                             card={card}
-                            commander={commander}
+                            isCommander={isCommander(card)} // Zmieniono na prosty boolean
                             isSideboard={true} // 💡 Oznaczamy jako sideboard
                             handleRemoveCard={handleRemoveCard}
                             handleSetCommander={handleSetCommander}
+                            handleRemoveCommander={handleRemoveCommander} // Przekazujemy, aby odznaczyć
                             handleToggleCardLocation={handleToggleCardLocation}
                         />
                     ))
@@ -207,29 +210,34 @@ SIDEBOARD:
 }
 
 // ----------------------------------------------------------------------
-// 4. NOWY KOMPONENT POMOCNICZY DO WYŚWIETLANIA KARTY (aby uniknąć powtarzania kodu)
+// 4. NOWY KOMPONENT POMOCNICZY DO WYŚWIETLANIA KARTY
 // ----------------------------------------------------------------------
 interface CardDisplayProps {
     card: CardType;
-    commander: CardType | null;
+    // ZMIANA: Zastąpiono 'commander: CardType | null' prostym 'isCommander: boolean'
+    isCommander: boolean; 
     isSideboard: boolean;
     handleRemoveCard: (id: string, isSideboard: boolean) => void;
+    // ZMIANA: Te funkcje teraz pracują z listą commanderów
     handleSetCommander: (card: CardType) => void;
+    handleRemoveCommander: (card: CardType) => void; 
     handleToggleCardLocation: (card: CardType, isSideboard: boolean) => void;
 }
 
 const CardDisplay: React.FC<CardDisplayProps> = ({
     card,
-    commander,
+    isCommander, // Używamy prostego boolean
     isSideboard,
     handleRemoveCard,
     handleSetCommander,
+    handleRemoveCommander,
     handleToggleCardLocation
 }) => {
     return (
         <div
             style={{
-                border: commander && commander.id === card.id ? '2px solid gold' : '1px solid gray',
+                // ZMIANA: Używamy nowego propa isCommander
+                border: isCommander ? '2px solid gold' : '1px solid gray', 
                 padding: "4px",
                 textAlign: "center",
                 width: "120px",
@@ -277,7 +285,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
                 >
                     Usuń
                 </button>
-                
+
                 {isSideboard ? (
                     // Przycisk dla Sideboardu
                     <button
@@ -297,18 +305,18 @@ const CardDisplay: React.FC<CardDisplayProps> = ({
                     // Przyciski dla Decku
                     <>
                         <button
-                            onClick={() => handleSetCommander(card)}
-                            disabled={!!commander && commander.id === card.id}
+                            // ZMIANA: handleSetCommander teraz dodaje/usuwa kartę z tablicy commanderów
+                            onClick={() => isCommander ? handleRemoveCommander(card) : handleSetCommander(card)} 
                             style={{
                                 padding: "4px 8px",
-                                background: "#4CAF50",
+                                background: isCommander ? "#6c757d" : "#4CAF50", // Zmieniony kolor, gdy ustawiony
                                 color: "white",
                                 border: "none",
                                 cursor: "pointer",
                                 borderRadius: '2px',
                             }}
                         >
-                            {commander && commander.id === card.id ? 'Commander (ustawiony)' : 'Ustaw jako commandera'}
+                            {isCommander ? 'Usuń z Commanderów' : 'Ustaw jako commandera'}
                         </button>
                         <button
                             onClick={() => handleToggleCardLocation(card, false)}

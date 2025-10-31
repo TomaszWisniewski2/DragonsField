@@ -222,31 +222,66 @@ export default function Zones({
         </div>
       </div>
 
-      {/* ZONA - Commander Zone */}
+{/* ZONA - Commander Zone (Poprawka renderowania stosu) */}
       {session.sessionType === "commander" && (
         <div className="zone-box-container">
-          <span className="zone-label">Commander Zone</span>
+          <span className="zone-label">Commander Zone ({player?.commanderZone.length ?? 0})</span>
           <div
             className="zone-box commander-zone"
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => handleDrop(e, "commanderZone")}
+            // WAŻNE: Dodaj styl 'position: relative' do CSS dla .zone-box.commander-zone!
+            style={{ position: 'relative' }} 
           >
             {player.commanderZone.length > 0 && (
-              <div
-                draggable
-                onDragStart={(e) => handleZoneDragStart(e, player.commanderZone, "commanderZone")}
-                onMouseEnter={() => handleCardHover(player.commanderZone[0])}
-                onMouseLeave={() => handleCardHover(null)}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Card
-                  card={player.commanderZone[0]}
-                  from="commanderZone"
-                  ownerId={player.id}
-                  getPlayerColorClass={getPlayerColorClass}
-                  zoom={zoom}
-                />
-              </div>
+              // Używamy płytkiej kopii i mapowania, aby uzyskać wizualny stos.
+              // Karta [0] powinna być renderowana jako OSTATNIA (najwyższy z-index).
+              [...player.commanderZone].map((card, index) => { 
+                
+                // Używamy oryginalnego indeksu. Karta[0] jest na górze, ma największy Z-Index, najmniejszy offset.
+                // Aby renderować ją jako ostatnią w DOM, odwracamy kolejność iteracji.
+                const originalIndex = index;
+                //const renderIndex = player.commanderZone.length - 1 - index; // 0 dla ostatniej (górnej) karty, max dla dolnej
+
+                const isTopCard = originalIndex === 0;
+
+                // Offset jest zerowy dla karty na górze (originalIndex === 0)
+                const offset = originalIndex * 3; 
+
+                return (
+                  <div
+                    key={card.id}
+                    // Zapewniamy, że wszystkie karty zajmują tyle samo miejsca, ale są pozycjonowane absolutnie
+                    className="stack-card-wrapper"
+                    style={{ 
+                        position: 'absolute', // Kluczowe do nakładania
+                        top: `${offset}px`, 
+                        left: `${offset}px`, 
+                        zIndex: 10 + (player.commanderZone.length - originalIndex), // Wyższy Z-Index dla kart bliżej góry stosu
+                    }}
+                    draggable={isTopCard} // Tylko górna karta jest draggable
+                    onDragStart={(e) => {
+                        if (isTopCard) {
+                            e.stopPropagation();
+                            const cardId = card.id;
+                            e.dataTransfer.setData("cardId", cardId);
+                            e.dataTransfer.setData("from", "commanderZone");
+                        }
+                    }}
+                    onMouseEnter={() => isTopCard && handleCardHover(card)}
+                    onMouseLeave={() => isTopCard && handleCardHover(null)}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Card
+                      card={card}
+                      from="commanderZone"
+                      ownerId={player.id}
+                      getPlayerColorClass={getPlayerColorClass}
+                      zoom={zoom}
+                    />
+                  </div>
+                );
+              }).reverse() // Odwracamy mapowaną tablicę, aby karta [0] była renderowana jako ostatnia w DOM
             )}
           </div>
         </div>

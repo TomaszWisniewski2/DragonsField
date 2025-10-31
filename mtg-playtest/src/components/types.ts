@@ -72,7 +72,7 @@ export interface Player {
   graveyard: CardType[];
   exile: CardType[];
   commanderZone: CardType[];
-  commander?: CardType;
+  commander?: CardType[];
   sideboard: CardType[];
   manaPool: {
     W: number;

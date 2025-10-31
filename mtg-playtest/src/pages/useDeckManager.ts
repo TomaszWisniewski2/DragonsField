@@ -291,7 +291,8 @@ function mapScryfallDataToCardType(data: ScryfallCardData, tokens?: TokenData[])
 interface DeckManagerHook {
     deck: CardType[];
     sideboard: CardType[];
-    commander: CardType | null;
+    // ZMIANA: commander jest tablicą
+    commander: CardType[];
     tokenList: TokenData[];
     query: string;
     bulkText: string;
@@ -301,8 +302,9 @@ interface DeckManagerHook {
     handleAddCard: () => Promise<void>;
     handleRemoveCard: (id: string, isSideboard?: boolean) => void;
     handleToggleCardLocation: (card: CardType, isSideboard: boolean) => void;
+    // ZMIANA: Handlery przyjmują teraz CardType do usunięcia
     handleSetCommander: (card: CardType) => void;
-    handleRemoveCommander: () => void;
+    handleRemoveCommander: (card: CardType) => void;
     handleBulkImport: () => Promise<void>;
     handleClearStorage: () => void;
     calculateTotalManaValue: () => number;
@@ -334,13 +336,25 @@ export function useDeckManager(): DeckManagerHook {
             }
         }
     );
-    const [commander, setCommander] = useState<CardType | null>(
+    // ZMIANA: Stan commandera jest teraz tablicą (CardType[])
+    const [commander, setCommander] = useState<CardType[]>(
         () => {
             try {
                 const savedCommander = localStorage.getItem("commander");
-                return savedCommander ? JSON.parse(savedCommander) : null;
+                if (!savedCommander) return [];
+                
+                const parsed = JSON.parse(savedCommander);
+                
+                // Obsługa migracji ze starego formatu (pojedyncza karta)
+                if (Array.isArray(parsed)) {
+                    return parsed;
+                } else if (parsed && typeof parsed === 'object') {
+                    return [parsed]; // Jeśli to stara, pojedyncza karta, zamień na tablicę
+                }
+                
+                return [];
             } catch {
-                return null;
+                return [];
             }
         }
     );
@@ -349,6 +363,7 @@ const [staticTokens] = useState<TokenData[]>(STATIC_TOKENS.map(mapCardToToken));
 // Dynamiczne tokeny (dodawane przez karty)
 const [dynamicTokens, setDynamicTokens] = useState<TokenData[]>(() => {
     try {
+        // Używamy "dynamicTokens" zamiast "tokenList" do przechowywania *tylko* generowanych tokenów
         const savedDynamic = JSON.parse(localStorage.getItem("dynamicTokens") || "[]");
         return savedDynamic;
     } catch {
@@ -358,7 +373,15 @@ const [dynamicTokens, setDynamicTokens] = useState<TokenData[]>(() => {
 
 // Dla zachowania kompatybilności — łączona lista (dynamiczne + statyczne)
 const tokenList = useMemo(() => {
-    return [...dynamicTokens, ...staticTokens];
+    // Upewniamy się, że nie ma duplikatów (nazwy statyczne + dynamiczne)
+    const combined = [...dynamicTokens, ...staticTokens];
+    const uniqueTokens = new Map<string, TokenData>();
+    for (const token of combined) {
+        if (!uniqueTokens.has(token.name)) {
+            uniqueTokens.set(token.name, token);
+        }
+    }
+    return Array.from(uniqueTokens.values());
 }, [dynamicTokens, staticTokens]);
 
     const [loading, setLoading] = useState(false);
@@ -376,18 +399,22 @@ const updateTokenList = useCallback((newTokens: TokenData[] | undefined) => {
 
     setDynamicTokens(prevList => {
         const currentNames = new Set(prevList.map(t => t.name));
+        // Dodajemy tylko tokeny, których jeszcze nie mamy (po nazwie)
         const uniqueNewTokens = newTokens.filter(t => !currentNames.has(t.name));
         return uniqueNewTokens.length > 0 ? [...prevList, ...uniqueNewTokens] : prevList;
     });
 }, []);
 
     /**
-     * Funkcja do czyszczenia listy tokenów i ponownego skanowania talii.
+     * Funkcja do czyszczenia listy dynamicznych tokenów i ponownego skanowania talii.
      */
 const recomputeTokenList = useCallback(() => {
     const tokenMap = new Map<string, TokenData>();
+    // ZMIANA: Skanujemy tokeny ze wszystkich kart, wliczając commandery
+    const allCards = [...deck, ...sideboard, ...commander];
 
-    [...deck, ...sideboard].forEach(card => {
+    // Dodajemy tokeny ze wszystkich kart, w tym commanderów
+    allCards.forEach(card => {
         card.tokens?.forEach(token => {
             if (!tokenMap.has(token.name)) {
                 tokenMap.set(token.name, token);
@@ -396,33 +423,23 @@ const recomputeTokenList = useCallback(() => {
     });
 
     setDynamicTokens(Array.from(tokenMap.values()));
-}, [deck, sideboard]);
+}, [deck, sideboard, commander]);
 
     // ----------------------------------------------------------------------
     // SIDE EFFECTS (useEffect)
     // ----------------------------------------------------------------------
-
-    // Użyj useEffect do aktualizacji localStorage
-    useEffect(() => {
-        localStorage.setItem("tokenList", JSON.stringify(tokenList));
-    }, [tokenList]);
-
+    
     useEffect(() => {
         localStorage.setItem("currentSideboard", JSON.stringify(sideboard));
     }, [sideboard]);
     
-    // Specjalne useEffect dla decku (można również ręcznie w handleAddCard/handleRemoveCard)
     useEffect(() => {
         localStorage.setItem("currentDeck", JSON.stringify(deck));
     }, [deck]);
 
+    // ZMIANA: Zapis commandera
     useEffect(() => {
-        // Ponowne przeliczenie tokenów po zmianie decku lub sideboardu
-        recomputeTokenList();
-    }, [deck, sideboard, recomputeTokenList]); 
-    
-    useEffect(() => {
-        if (commander) {
+        if (commander.length > 0) {
             localStorage.setItem("commander", JSON.stringify(commander));
         } else {
             localStorage.removeItem("commander");
@@ -430,21 +447,27 @@ const recomputeTokenList = useCallback(() => {
     }, [commander]);
 
     useEffect(() => {
-    localStorage.setItem("dynamicTokens", JSON.stringify(dynamicTokens));
-}, [dynamicTokens]);
+        // Ponowne przeliczenie tokenów po zmianie decku, sideboardu lub commandera
+        recomputeTokenList();
+    }, [deck, sideboard, commander, recomputeTokenList]); 
+    
+    useEffect(() => {
+        localStorage.setItem("dynamicTokens", JSON.stringify(dynamicTokens));
+    }, [dynamicTokens]);
     
     // ----------------------------------------------------------------------
     // OBSŁUGA ZDARZEŃ (HANDLERY)
     // ----------------------------------------------------------------------
 
     const calculateTotalManaValue = (): number => {
+        // Liczymy tylko karty z głównej talii
         return deck.reduce((sum, card) => sum + (card.mana_value || 0), 0);
     };
 
     /**
      * Obsługa dodawania pojedynczej karty.
      */
-    async function handleAddCard() {
+    const handleAddCard = useCallback(async () => {
         if (!query.trim()) return;
         setLoading(true);
         try {
@@ -456,9 +479,9 @@ const recomputeTokenList = useCallback(() => {
             updateTokenList(tokens);
 
             // Nowe karty trafiają do głównej talii
-            const newDeck = [...deck, { ...card, id: `${card.id}-${Date.now()}` }]; // Dodajemy unikalne ID
+            // Używamy unikalnego ID dla instancji karty
+            const newDeck = [...deck, { ...card, id: `${card.id}-${Date.now()}` }]; 
             setDeck(newDeck);
-            // localStorage.setItem("currentDeck", JSON.stringify(newDeck)); // Już jest w useEffect
             setQuery("");
         } catch (err) {
             alert("Nie udało się znaleźć karty.");
@@ -466,28 +489,28 @@ const recomputeTokenList = useCallback(() => {
         } finally {
             setLoading(false);
         }
-    }
+    }, [query, deck, updateTokenList]);
 
     /**
      * Funkcja do usuwania karty z dowolnej listy (Deck lub Sideboard).
      */
-    function handleRemoveCard(id: string, isSideboard: boolean = false) {
-        if (commander && commander.id === id) {
-            setCommander(null);
-        }
-
+const handleRemoveCard = useCallback((id: string, isSideboard: boolean = false) => {
         if (isSideboard) {
             setSideboard(prevSideboard => prevSideboard.filter((c) => c.id !== id));
         } else {
             setDeck(prevDeck => prevDeck.filter((c) => c.id !== id));
         }
+
+        // ZMIANA: Usuwamy kartę z listy commanderów, jeśli jej ID pasuje
+        setCommander(prevCommanders => prevCommanders.filter(c => c.id !== id));
+        
         // TokenList i localStorage są aktualizowane przez useEffect/recomputeTokenList
-    }
+    }, []);
 
     /**
      * Funkcja do przenoszenia karty między taliami.
      */
-    function handleToggleCardLocation(card: CardType, isSideboard: boolean) {
+    const handleToggleCardLocation = useCallback((card: CardType, isSideboard: boolean) => {
         if (isSideboard) {
             // Przenieś z Sideboard do Deck
             setSideboard(prevSideboard => prevSideboard.filter(c => c.id !== card.id));
@@ -497,30 +520,37 @@ const recomputeTokenList = useCallback(() => {
             setDeck(prevDeck => prevDeck.filter(c => c.id !== card.id));
             setSideboard(prevSideboard => [...prevSideboard, card]);
             
-            // Jeśli przenoszona jest commander, usuwamy go z commandera
-            if (commander && commander.id === card.id) {
-                setCommander(null);
-            }
+            // ZMIANA: Jeśli przenoszona jest commander, usuwamy go z listy commanderów
+            setCommander(prevCommanders => prevCommanders.filter(c => c.id !== card.id));
         }
-    }
+    }, []);
 
-    function handleSetCommander(card: CardType) {
-        setCommander(card);
+    /**
+     * ZMIANA: Dodaje kartę do listy commanderów.
+     */
+    const handleSetCommander = useCallback((card: CardType) => {
+        // Dodaj kartę do listy commanderów tylko, jeśli jej tam nie ma (sprawdzamy po unikalnym ID)
+        setCommander(prevCommanders => {
+            if (prevCommanders.some(c => c.id === card.id)) {
+                return prevCommanders;
+            }
+            return [...prevCommanders, card];
+        });
         
-        // Jeśli commander jest w sideboardzie, usuń go stamtąd
-        if (sideboard.some(c => c.id === card.id)) {
-            setSideboard(prevSideboard => prevSideboard.filter(c => c.id !== card.id));
+        // Zapewnienie, że commander jest w głównej talii
+        setSideboard(prevSideboard => prevSideboard.filter(c => c.id !== card.id));
+        if (!deck.some(c => c.id === card.id)) {
             setDeck(prevDeck => [...prevDeck, card]);
         }
-        // Upewnij się, że commander jest w talii (jeśli nie był nigdzie)
-        if (!deck.some(c => c.id === card.id) && !sideboard.some(c => c.id === card.id)) {
-             setDeck(prevDeck => [...prevDeck, card]);
-        }
-    }
+    }, [deck]);
 
-    function handleRemoveCommander() {
-        setCommander(null);
-    }
+    /**
+     * ZMIANA: Usuwa KONKRETNĄ kartę z listy commanderów.
+     */
+    const handleRemoveCommander = useCallback((cardToRemove: CardType) => {
+        // Filtrujemy listę, usuwając kartę o pasującym ID instancji
+        setCommander(prevCommanders => prevCommanders.filter(c => c.id !== cardToRemove.id));
+    }, []);
     
     /**
      * Obsługa masowego importu.
@@ -530,7 +560,8 @@ const recomputeTokenList = useCallback(() => {
         const preciseCardLineRegex = /^(\d+)\s+(.+?)\s+\(([A-Z0-9]+)\)\s+([A-Z0-9\-\\/]+)$/;
 
         // 2. Poprawiony Regex do fallbacku: ILOŚĆ NAZWA (opcjonalny SET) (opcjonalny NUMER lub inne śmieci, które ignorujemy)
-        const basicCardLineRegex = /^(\d+)\s+(.+?)(?:\s+\(([A-Z0-9]+)\))?(?:\s+[A-Z0-9\-\\/]+)?$/;
+        // Zauważ, że usunięto grupę dla numeru, aby uniknąć problemów
+        const basicCardLineRegex = /^(\d+)\s+(.+?)(?:\s+\(([A-Z0-9]+)\))?/;
 
         // 3. NOWY Regex do pobierania tylko po NAZWIE (ignorując set i numer)
         const bareNameLineRegex = /^(\d+)\s+(.+)$/;
@@ -539,11 +570,14 @@ const recomputeTokenList = useCallback(() => {
         const newDeck: CardType[] = [];
         const newSideboard: CardType[] = [];
         const bulkTokens: TokenData[] = [];
-        let newCommander: CardType | null = null;
+        // ZMIANA: newCommanders to tablica
+        const newCommanders: CardType[] = []; 
         const uniqueTokenNamesInBulk = new Set<string>();
-
+        // 💡 NOWOŚĆ: Śledzenie, które karty (po Scryfall ID) już zostały dodane jako dowódcy
+        const commanderBaseIdsInBulk = new Set<string>();
+        let isCommanderAlreadySet = false;
         let isSideboardSection = false;
-
+//-----------------------------------------------------------------------------------
         setLoading(true);
         try {
             for (const line of lines) {
@@ -561,16 +595,16 @@ const recomputeTokenList = useCallback(() => {
                 
                 
                 // 1. Próba precyzyjnego pobrania (SET + NUMER)
-                const preciseMatch = line.match(preciseCardLineRegex);
-                if (preciseMatch) {
-                    const setCode = preciseMatch[3]; 
-                    const collectorNumber = preciseMatch[4];
-                    try {
-                        data = await getCardBySetAndNumber(setCode, collectorNumber);
-                    } catch (error) { 
-                        console.warn(`Nie udało się pobrać karty (SET/NUMER): ${line}. Próba nazwy. Błąd: ${error}`);
-                    }
-                }
+const preciseMatch = line.match(preciseCardLineRegex);
+        if (preciseMatch) {
+            const setCode = preciseMatch[3]; 
+            const collectorNumber = preciseMatch[4];
+            try {
+                data = await getCardBySetAndNumber(setCode, collectorNumber);
+            } catch { // Usunięto deklarację 'error'
+                // console.warn(`Nie udało się pobrać karty (SET/NUMER): ${line}. Próba nazwy. Błąd: ${error}`);
+            }
+        }
                 
                 // 2. Fallback do pobierania po NAZWIE + (ewentualnie SET)
                 if (!data) {
@@ -580,14 +614,22 @@ const recomputeTokenList = useCallback(() => {
                         const setCode = basicMatch[3]; 
                         
                         let scryfallQuery = baseName;
+                        // Usuwamy wszystko, co jest za nawiasem, np. numer kolekcjonerski, *F*
+                        let finalName = baseName.replace(/\s+\(.*?\)/g, ''); // Usuń (SET)
+                        finalName = finalName.replace(/\s+[A-Z0-9\-\\/]+(?=\s|$)/g, '') // Usuń NUMER
+                                              .replace(/\s+\*?[FNG]+\*?$/i, '') // Usuń *F* / *NF*
+                                              .trim();
+
                         if (setCode) {
-                            scryfallQuery += ` set:${setCode}`;
+                            scryfallQuery = `${finalName} set:${setCode}`;
+                        } else {
+                            scryfallQuery = finalName;
                         }
                         
                         try {
                             data = await getCardByName(scryfallQuery);
-                        } catch (error) {
-                            console.error(`Nie udało się pobrać karty (Nazwa/SET): ${line}. Błąd: ${error}`);
+                        } catch  {
+                            // console.error(`Nie udało się pobrać karty (Nazwa/SET): ${line}. Błąd: ${error}`);
                         }
                     }
                 }
@@ -596,17 +638,14 @@ const recomputeTokenList = useCallback(() => {
 if (!data) {
     const bareMatch = line.match(bareNameLineRegex);
     if (bareMatch) {
-        let namePart = bareMatch[2].trim(); // np. "Mountain (EOE) 265 *F*"
+        let namePart = bareMatch[2].trim(); 
 
-        // Usunięcie wszystkich niepożądanych znaczników, które Scryfall może zinterpretować źle.
-        // Usuwa (SET), NUMER, *F*
+        // Usuwamy wszystkie niepożądane znaczniki, które Scryfall może zinterpretować źle.
         namePart = namePart.replace(/\s+\(.*?\)/g, '') // Usuń (SET)
-                           .replace(/\s+[A-Z0-9\-\\/]+(?=\s|$)/g, '') // Usuń NUMER
-                           .replace(/\s+\*?[FNG]+\*?$/i, '') // Usuń *F* / *NF*
-                           .trim();
+                         .replace(/\s+[A-Z0-9\-\\/]+(?=\s|$)/g, '') // Usuń NUMER
+                         .replace(/\s+\*?[FNG]+\*?$/i, '') // Usuń *F* / *NF*
+                         .trim();
         
-        // Z "Mountain (EOE) 265 *F*" pozostanie tylko "Mountain"
-
         if (namePart) {
             try {
                 data = await getCardByName(namePart); 
@@ -637,21 +676,41 @@ if (!data) {
                     });
                 }
 
-                // Sprawdzanie i ustawianie commandera (tylko w głównej talii)
-                if (!isSideboardSection && card.type_line?.includes("Legendary Creature") && !newCommander) {
-                    // UWAGA: Ustawiamy commandera na pierwszą znalezioną legendary creature w sekcji głównej talii.
-                    // Card musi mieć unikalne ID (zgodne z resztą talii)
-                    newCommander = { ...card, id: `${card.id}-${Date.now()}-commander` };
+// ZMIANA: Sprawdzanie i dodawanie commandera do listy (tylko w głównej talii)
+                if (!isSideboardSection && card.type_line?.includes("Legendary Creature")) {
+                    const commanderBaseId = card.id; // To jest ID Scryfall karty
+
+                    // 💡 Zmieniony WARUNEK: Sprawdzamy, czy commander został już ustawiony
+                    if (!isCommanderAlreadySet) {
+                        // Dodajemy pierwszą znalezioną kartę jako commandera
+                        
+                        // Musimy użyć unikalnego ID dla instancji commandera (aby powiązać ją z kopią w Decku)
+                        const newCommanderInstance: CardType = { 
+                            ...card, 
+                            id: `${commanderBaseId}-${Date.now()}-commander` 
+                        };
+
+                        newCommanders.push(newCommanderInstance);
+                        
+                        // 💡 WAŻNE: Ustawiamy flagę na true po dodaniu pierwszego
+                        isCommanderAlreadySet = true;
+                        
+                        // Zapisujemy ID Scryfall, aby móc użyć tej samej instancji w talii
+                        commanderBaseIdsInBulk.add(card.id); 
+                    }
                 }
 
                 // Dodawanie kart do odpowiedniej listy z odpowiednią ilością kopii
                 for (let i = 0; i < count; i++) {
-                    // Upewniamy się, że commander nie jest dodawany dwa razy jeśli był w linii 1,
-                    // ale musi być dodany, jeśli nie został oznaczony jako commander.
-                    const isCommanderCopy = newCommander && card.id === newCommander.id && i === 0 && !isSideboardSection;
+                    
+                    // Sprawdzamy, czy aktualnie dodawana karta jest instancją commandera, która została już utworzona
+                    const commanderInstance = newCommanders.find(c => c.id.startsWith(card.id));
+                    
+                    // Logika: Jeśli to jest pierwsza kopia i jest commanderem, użyj instancji commandera (o specjalnym ID)
+                    const isCommanderCopy = (i === 0 && !isSideboardSection && !!commanderInstance);
                     
                     const uniqueCard: CardType = isCommanderCopy
-                        ? newCommander!
+                        ? commanderInstance!
                         : { ...card, id: `${card.id}-${i}-${Date.now()}` }; 
 
                     if (isSideboardSection) {
@@ -667,7 +726,8 @@ if (!data) {
 
             setDeck(newDeck);
             setSideboard(newSideboard); 
-            setCommander(newCommander);
+            // ZMIANA: Ustawienie tablicy commanderów
+            setCommander(newCommanders); 
 
             setBulkText(""); 
         } catch (error) {
@@ -677,7 +737,7 @@ if (!data) {
             setLoading(false);
         }
     }
-
+//------------------------------------------------------------------------------
 
     const handleClearStorage = () => {
         if (window.confirm("Czy na pewno chcesz usunąć całą talię (w tym commandera, tokeny) ORAZ cały cache wyszukiwania kart Scryfall z pamięci lokalnej?")) {
@@ -700,12 +760,12 @@ if (!data) {
             localStorage.removeItem("currentDeck");
             localStorage.removeItem("currentSideboard"); 
             localStorage.removeItem("commander");
-            localStorage.removeItem("tokenList");
+            localStorage.removeItem("dynamicTokens"); // Zmiana z "tokenList" na "dynamicTokens"
 
             // 3. Resetowanie stanów komponentu
             setDeck([]);
             setSideboard([]); 
-            setCommander(null);
+            setCommander([]); // ZMIANA: Reset na pustą tablicę
             setDynamicTokens([])
             setBulkText("");
             setQuery("");

@@ -127,14 +127,16 @@ const log = (...args: Array<unknown>) => {
     [emitEvent]
   );
 
-  const joinSession = useCallback(
+const joinSession = useCallback(
     (
       code: string,
       playerName: string,
       deck: CardType[],
       sessionType: SessionType,
-      sideboardCards: CardType[]
-    ) => emitEvent("joinSession", { code, playerName, deck, sessionType, sideboardCards }),
+      sideboardCards: CardType[],
+      // 🟢 ZMIANA TYPU NA LISTĘ
+      commanderCard?: CardType[] | null 
+    ) => emitEvent("joinSession", { code, playerName, deck, sessionType, sideboardCards,commanderCard }),
     [emitEvent]
   );
 

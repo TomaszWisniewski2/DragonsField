@@ -183,28 +183,36 @@ const openCommanderViewerForPlayer = (pId: string) => {
 
 
 const handleJoinSession = (code: string, sessionType: SessionType) => {
-const savedDeck = localStorage.getItem("currentDeck");
-const deck: CardType[] = savedDeck ? JSON.parse(savedDeck) : [];
+  const savedDeck = localStorage.getItem("currentDeck");
+  const deck: CardType[] = savedDeck ? JSON.parse(savedDeck) : [];
 
-const savedSideboard = localStorage.getItem("currentSideboard");
-const sideboard: CardType[] = savedSideboard ? JSON.parse(savedSideboard) : [];
+  const savedSideboard = localStorage.getItem("currentSideboard");
+  // 🟢 POPRAWKA: Zmieniamy "commanders" na "commander" (jak w useDeckManager.ts)
+  const savedCommanders = localStorage.getItem("commander"); 
+  
+  const sideboard: CardType[] = savedSideboard ? JSON.parse(savedSideboard) : [];
+  // CommanderCard jest teraz listą CardType[]
+  // Upewnij się, że JSON.parse zwróci listę. Jeśli null, użyj pustej listy.
+  const commanderCards: CardType[] = savedCommanders ? JSON.parse(savedCommanders) : []; 
 
-if (!playerName) {
-alert("Nazwa gracza nie może być pusta.");
-return;
-}
+  if (!playerName) {
+    alert("Nazwa gracza nie może być pusta.");
+    return;
+  }
 
-if (deck.length === 0) {
-alert("Talia jest pusta! Zbuduj talię w Deck Managerze.");
-return;
-}
+  if (deck.length === 0) {
+    alert("Talia jest pusta! Zbuduj talię w Deck Managerze.");
+    return;
+  }
+  
+  // ✅ Walidacja powinna teraz działać, ponieważ `commanderCards` zostanie poprawnie wczytane.
+  if (sessionType === "commander" && commanderCards.length === 0) {
+    alert("W trybie Commander musisz wybrać co najmniej jedną kartę dowódcy.");
+    return;
+  }
 
-if (sessionType === "commander" && deck.length === 0) {
-alert("W trybie Commander talia musi zawierać kartę dowódcy.");
-return;
-}
-
-joinSession(code, playerName, deck, sessionType,sideboard);
+  // 🟢 PRZEKAZUJEMY LISTĘ
+  joinSession(code, playerName, deck, sessionType, sideboard, commanderCards); 
 };
 
 const handleShuffle = () => {

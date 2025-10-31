@@ -56,6 +56,17 @@ export default function TokenViewer({
     {filteredTokens.map((token, index) => {
         const items: React.ReactNode[] = [];
 
+
+
+                // Separator po Treasure
+        if (token.name === "Start Your Engines!") {
+            items.push(
+                <li key={`separator-${index}`} className="token-separator">
+                    <hr />
+                </li>
+            );
+        }
+
         // Normalny token
         items.push(
             <li
@@ -84,14 +95,7 @@ export default function TokenViewer({
             </li>
         );
 
-        // Separator po Treasure
-        if (token.name === "Treasure") {
-            items.push(
-                <li key={`separator-${index}`} className="token-separator">
-                    <hr />
-                </li>
-            );
-        }
+
 
         return items;
     })}
@@ -117,6 +121,8 @@ export default function TokenViewer({
                         onChange={(e) => setFilterText(e.target.value)}
                     />
                 </div>
+
+                
                 <img ref={dragImageRef} className="drag-image-placeholder" alt="Drag Placeholder" />
             </div>
 
