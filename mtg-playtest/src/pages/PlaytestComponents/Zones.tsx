@@ -69,22 +69,22 @@ export default function Zones({
   };
 
   // Logika dla Library musi być inna, bo przeciągamy górną kartę
-  const handleLibraryDragStart = (e: React.DragEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-    if (player.library.length > 0) {
-        const cardId = player.library[0].id; // Górna karta jest na indeksie [0]
-        e.dataTransfer.setData("cardId", cardId);
-        e.dataTransfer.setData("from", "library");
-        
-        // Obraz przeciągania
-        e.dataTransfer.setDragImage(
-            (e.currentTarget.querySelector('.mtg-card-back') || e.currentTarget.querySelector('.card-component')) as Element, 
-            e.currentTarget.offsetWidth / 2, 
-            e.currentTarget.offsetHeight / 2
-        );
-    }
-  };
+const handleLibraryDragStart = (e: React.DragEvent<HTMLDivElement>) => {
+  e.stopPropagation();
+  if (player.library.length > 0) {
+      // Górna karta to ostatni element — zgodnie z logiką serwera
+      const topCard = player.library[0];
+      const cardId = topCard.id;
+      e.dataTransfer.setData("cardId", cardId);
+      e.dataTransfer.setData("from", "library");
 
+      // Obraz przeciągania
+      const dragImage = e.currentTarget.querySelector('.mtg-card-back') || e.currentTarget.querySelector('.card-component');
+      if (dragImage) {
+        e.dataTransfer.setDragImage(dragImage as Element, e.currentTarget.offsetWidth / 2, e.currentTarget.offsetHeight / 2);
+      }
+  }
+};
   // Logika hovera dla Library
   const handleLibraryMouseEnter = () => {
     // Podgląd górnej karty tylko, gdy jest ODKRYTA
