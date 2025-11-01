@@ -32,7 +32,7 @@ export const useSocket = (serverUrl: string) => {
 
     const socket = io(serverUrl, {
       transports: ["websocket"], // szybsze i stabilniejsze
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 9,
       reconnectionDelay: 1000,
     });
 
@@ -56,13 +56,13 @@ const log = (...args: Array<unknown>) => {
       log("❌ Rozłączono:", reason);
     });
 
-   let updateTimeout: ReturnType<typeof setTimeout> | null = null;
+  // let updateTimeout: ReturnType<typeof setTimeout> | null = null;
 
 socket.on("updateState", (updatedSession: Session) => {
   // 🔹 Odkładamy ustawienie stanu o 50 ms, by zgrupować wiele update'ów w jeden
-  if (updateTimeout) clearTimeout(updateTimeout);
+ // if (updateTimeout) clearTimeout(updateTimeout);
 
-  updateTimeout = setTimeout(() => {
+  //updateTimeout = setTimeout(() => {
     setSession(updatedSession);
     log("📥 [ZDEBOUNCED] Aktualizacja sesji:", updatedSession.code);
 
@@ -94,7 +94,7 @@ socket.on("updateState", (updatedSession: Session) => {
         ? uniqueTokens
         : prev
     );
-  }, 150);
+ // }, 150);
 });
 
     socket.on("updateSessionStats", (stats: SessionStats) => {
