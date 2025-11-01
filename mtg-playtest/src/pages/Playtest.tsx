@@ -237,30 +237,13 @@ const newManaValue = Math.max(0, player.manaPool[color] + amount);
 changeMana(session.code, player.id, color, newManaValue);
 }
 };
-
 // --- WRAPPER DO TWORZENIA TOKENÓW ---
 const handleCreateToken = useCallback((tokenData: TokenData) => {
-  if (!player || !session) return;
-
-  // 🔹 Utworzenie unikalnego identyfikatora instancji tokena na polu bitwy
-  const newTokenId = crypto.randomUUID();
-
-  // 🔹 Przekazanie tokenData wraz z nowym ID (dla serwera i lokalnej logiki)
-  const tokenPayload = {
-    ...tokenData,
-    instanceId: newTokenId, // aby serwer lub klient wiedział, że to nowy obiekt
-  };
-
-  console.log("🧩 Tworzenie nowego tokena:", tokenPayload);
-
-  // 🔹 Emisja do serwera (który utworzy tokena u wszystkich graczy)
-  createToken(session.code, player.id, tokenPayload);
-
-  // 🔹 Zamknij TokenViewer
-  setIsTokenViewerOpen(false);
-}, [player, session, createToken]);
-
-
+if (player && session) {
+createToken(session.code, player.id, tokenData); 
+setIsTokenViewerOpen(false); 
+}
+}, [player, session, createToken]); // createToken musi być w zależnościach
 
 // WRAPPER DO PRZENOSZENIA WSZYSTKICH KART
 const handleMoveAllCards = useCallback((from: Zone, to: Zone) => {

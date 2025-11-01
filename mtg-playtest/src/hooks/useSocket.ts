@@ -56,46 +56,39 @@ const log = (...args: Array<unknown>) => {
       log("❌ Rozłączono:", reason);
     });
 
-   let updateTimeout: ReturnType<typeof setTimeout> | null = null;
+    socket.on("updateState", (updatedSession: Session) => {
+      setSession(updatedSession);
+      log("📥 Aktualizacja sesji:", updatedSession.code);
 
-socket.on("updateState", (updatedSession: Session) => {
-  // 🔹 Odkładamy ustawienie stanu o 50 ms, by zgrupować wiele update'ów w jeden
-  if (updateTimeout) clearTimeout(updateTimeout);
+      const tokensFromDeck =
+        updatedSession.players.find((p) => p.id === socket.id)?.initialDeck
+          ?.flatMap((card) => card.tokens || []) || [];
 
-  updateTimeout = setTimeout(() => {
-    setSession(updatedSession);
-    log("📥 [ZDEBOUNCED] Aktualizacja sesji:", updatedSession.code);
+      let tokensFromLocalStorage: TokenData[] = [];
+      try {
+        const saved = localStorage.getItem("tokenList");
+        if (saved) tokensFromLocalStorage = JSON.parse(saved);
+      } catch (err) {
+        console.error("Błąd parsowania tokenList:", err);
+      }
 
-    const tokensFromDeck =
-      updatedSession.players.find((p) => p.id === socket.id)?.initialDeck
-        ?.flatMap((card) => card.tokens || []) || [];
+      const uniqueTokens = [...tokensFromDeck, ...tokensFromLocalStorage].filter(
+        (token, index, self) =>
+          index ===
+          self.findIndex(
+            (t) =>
+              t.name === token.name &&
+              t.basePower === token.basePower &&
+              t.baseToughness === token.baseToughness
+          )
+      );
 
-    let tokensFromLocalStorage: TokenData[] = [];
-    try {
-      const saved = localStorage.getItem("tokenList");
-      if (saved) tokensFromLocalStorage = JSON.parse(saved);
-    } catch (err) {
-      console.error("Błąd parsowania tokenList:", err);
-    }
-
-    const uniqueTokens = [...tokensFromDeck, ...tokensFromLocalStorage].filter(
-      (token, index, self) =>
-        index ===
-        self.findIndex(
-          (t) =>
-            t.name === token.name &&
-            t.basePower === token.basePower &&
-            t.baseToughness === token.baseToughness
-        )
-    );
-
-    setAllAvailableTokens((prev) =>
-      JSON.stringify(prev) !== JSON.stringify(uniqueTokens)
-        ? uniqueTokens
-        : prev
-    );
-  }, 150);
-});
+      setAllAvailableTokens((prev) =>
+        JSON.stringify(prev) !== JSON.stringify(uniqueTokens)
+          ? uniqueTokens
+          : prev
+      );
+    });
 
     socket.on("updateSessionStats", (stats: SessionStats) => {
       setAllSessionStats(stats);
@@ -174,46 +167,21 @@ const joinSession = useCallback(
     [emitEvent]
   );
 
-const moveCard = useCallback(
-  (
-    code: string,
-    playerId: string,
-    from: Zone,
-    to: Zone,
-    cardId: string,
-    x?: number,
-    y?: number,
-    position?: number,
-    toBottom?: boolean
-  ) => {
-    // 🧩 Walidacja frontendu
-    if (!from) {
-      console.warn("⚠️ moveCard() wywołane z pustym `from`!", {
-        code,
-        playerId,
-        from,
-        to,
-        cardId,
-      });
-      return;
-    }
-
-    if (!to) {
-      console.warn("⚠️ moveCard() wywołane z pustym `to`!", {
-        code,
-        playerId,
-        from,
-        to,
-        cardId,
-      });
-      return;
-    }
-
-    emitEvent("moveCard", { code, playerId, from, to, cardId, x, y, position, toBottom });
-  },
-  [emitEvent]
-);
-
+  const moveCard = useCallback(
+    (
+      code: string,
+      playerId: string,
+      from: Zone,
+      to: Zone,
+      cardId: string,
+      x?: number,
+      y?: number,
+      position?: number,
+      toBottom?: boolean
+    ) =>
+      emitEvent("moveCard", { code, playerId, from, to, cardId, x, y, position, toBottom }),
+    [emitEvent]
+  );
 
   const rotateCard = useCallback(
     (code: string, playerId: string, cardId: string) =>

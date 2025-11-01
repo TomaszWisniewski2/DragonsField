@@ -362,130 +362,88 @@ useEffect(() => {
   };
 
   // --- OBSŁUGA DRAG & DROP ---
-function findCardZoneInPlayer(player: Player | undefined, cardId: string): Zone | null {
-  if (!player || !cardId) return null;
-  if (player.hand.some(c => c.id === cardId)) return "hand";
-  if (player.library.some(c => c.id === cardId)) return "library";
-  if (player.graveyard.some(c => c.id === cardId)) return "graveyard";
-  if (player.exile.some(c => c.id === cardId)) return "exile";
-  if (player.sideboard.some(c => c.id === cardId)) return "sideboard";
-  if (player.commanderZone.some(c => c.id === cardId)) return "commanderZone";
-  if (player.battlefield.some(f => f.id === cardId)) return "battlefield";
-  if (player.battlefield.some(f => f.card.id === cardId)) return "battlefield";
-  return null;
-}
 
-const handleDrop = (e: DragEvent<HTMLDivElement>) => {
-  e.preventDefault();
-  if (!battlefieldRef.current || !player) return;
-
-  const dropZoneRect = battlefieldRef.current.getBoundingClientRect();
-  const isToken = e.dataTransfer.getData("isToken");
-
-  // ----------------------------------------------------
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (!battlefieldRef.current) return;
+    const dropZoneRect = battlefieldRef.current.getBoundingClientRect();
+    const isToken = e.dataTransfer.getData("isToken");
+    const from = e.dataTransfer.getData("from") as Zone | "token"; // Zmieniono typ na "token"
+      // ----------------------------------------------------
   // 1. OBSŁUGA UPUSZCZENIA TOKENU Z TokenViewer
   // ----------------------------------------------------
-  if (isToken === "true") {
-    const tokenDataString = e.dataTransfer.getData("tokenData");
-    if (tokenDataString) {
-      try {
-        const tokenData: TokenData = JSON.parse(tokenDataString);
-        onCreateToken(tokenData);
-        return;
-      } catch (error) {
-        console.error("❌ Błąd parsowania danych tokenu:", error);
-        return;
-      }
+  if (isToken === "true" && from === "token") {
+   const tokenDataString = e.dataTransfer.getData("tokenData");
+   if (tokenDataString) {
+    try {
+     const tokenData: TokenData = JSON.parse(tokenDataString);
+     // Wywołujemy funkcję tworzącą token na serwerze.
+     // Ponieważ onCreateToken nie przyjmuje x/y, token utworzy się na
+     // domyślnej pozycji (100, 100), a gracz będzie musiał go przesunąć.
+     onCreateToken(tokenData); 
+     return; // Kończymy obsługę upuszczenia
+    } catch (error) {
+     console.error("Błąd parsowania danych tokenu:", error);
+     return;
     }
+   }
   }
+    const baseCardWidth = 150;
+    const baseCardHeight = 210;
 
-  // ----------------------------------------------------
-  // 2. WSPÓLNE USTAWIENIA DLA POZYCJI I SKALOWANIA
-  // ----------------------------------------------------
-  const baseCardWidth = 150;
-  const baseCardHeight = 210;
-  const scaledCardWidth = baseCardWidth * (zoom / 140);
-  const scaledCardHeight = baseCardHeight * (zoom / 140);
-  const targetPlayerId = viewedPlayer?.id || player.id;
-  if (!targetPlayerId) return;
+    const scaledCardWidth = baseCardWidth * (zoom / 140);
+    const scaledCardHeight = baseCardHeight * (zoom / 140);
 
-  const baseX = e.clientX - dropZoneRect.left - dragOffset.x;
-  const baseY = e.clientY - dropZoneRect.top - dragOffset.y;
+    const isGroupDrag = e.dataTransfer.types.includes("text/json");
 
-  const clamp = (val: number, min: number, max: number) =>
-    Math.max(min, Math.min(max, val));
+    if (isGroupDrag) {
+      const draggedCardsData = JSON.parse(e.dataTransfer.getData("text/json")) as { cardId: string, x: number, y: number }[];
 
-  const clamped = (x: number, y: number) => ({
-    x: clamp(x, 0, dropZoneRect.width - scaledCardWidth),
-    y: clamp(y, 0, dropZoneRect.height - scaledCardHeight),
-  });
+      const baseX = e.clientX - dropZoneRect.left - dragOffset.x;
+      const baseY = e.clientY - dropZoneRect.top - dragOffset.y;
 
-  // ----------------------------------------------------
-  // 3. OBSŁUGA GRUPOWEGO PRZENOSZENIA KART
-  // ----------------------------------------------------
-  const isGroupDrag = e.dataTransfer.types.includes("text/json");
-  if (isGroupDrag) {
-    const draggedCardsData = JSON.parse(
-      e.dataTransfer.getData("text/json")
-    ) as { cardId: string; x?: number; y?: number }[];
+      const offsetX = 20;
+      const offsetY = 20;
 
-    const fromRaw = e.dataTransfer.getData("from") as Zone | undefined;
-    const baseFrom = fromRaw || "hand";
+      draggedCardsData.forEach((cardData, index) => {
+        const newX = baseX + index * offsetX;
+        const newY = baseY + index * offsetY;
 
-    draggedCardsData.forEach((cardData, index) => {
-      const localZone = findCardZoneInPlayer(player, cardData.cardId);
-      const safeFrom: Zone = localZone || baseFrom;
+        const clampedX = Math.max(0, Math.min(newX, dropZoneRect.width - scaledCardWidth));
+        const clampedY = Math.max(0, Math.min(newY, dropZoneRect.height - scaledCardHeight));
 
-      if (process.env.NODE_ENV === "development" && !localZone) {
-        console.warn("⚠️ BattlefieldDrop: Nie znaleziono lokalnie strefy źródłowej dla", cardData.cardId, "używam fallback:", safeFrom);
-      }
-
-      const offset = clamped(baseX + index * 20, baseY + index * 20);
-      moveCard(sessionCode, targetPlayerId, safeFrom, "battlefield", cardData.cardId, offset.x, offset.y);
-    });
-
-    setSelectedCards([]);
-    setDraggedCards([]);
-    setIsDraggingGroup(false);
-    return;
-  }
-
-  // ----------------------------------------------------
-  // 4. POJEDYNCZE PRZENOSZENIE KARTY
-  // ----------------------------------------------------
-  const cardId = e.dataTransfer.getData("cardId");
-  if (!cardId) {
-    console.warn("⚠️ handleDrop: Brak cardId, pomijam drop event");
-    return;
-  }
-
-  const fromRaw = e.dataTransfer.getData("from") as Zone | undefined;
-  const detected = findCardZoneInPlayer(player, cardId);
-  const safeFrom: Zone = detected || fromRaw || "hand";
-
-  if (process.env.NODE_ENV === "development") {
-    if (!detected) console.warn("⚠️ BattlefieldDrop: Nie znaleziono strefy źródłowej lokalnie dla", cardId);
-    if (fromRaw && detected && fromRaw !== detected) {
-      console.warn("🚨 BattlefieldDrop: Rozbieżność między fromRaw i detected", {
-        cardId,
-        fromRaw,
-        detected,
+        const targetPlayerId = viewedPlayer?.id || player?.id;
+        if (targetPlayerId) {
+          moveCard(sessionCode, targetPlayerId, "battlefield", "battlefield", cardData.cardId, clampedX, clampedY);
+        }
       });
+
+      setSelectedCards([]);
+      setDraggedCards([]);
+      setIsDraggingGroup(false);
+
+    } else {
+      const cardId = e.dataTransfer.getData("cardId");
+      const from = e.dataTransfer.getData("from") as Zone;
+      const x = e.clientX - dropZoneRect.left - dragOffset.x;
+      const y = e.clientY - dropZoneRect.top - dragOffset.y;
+
+      const clampedX = Math.max(0, Math.min(x, dropZoneRect.width - scaledCardWidth));
+      const clampedY = Math.max(0, Math.min(y, dropZoneRect.height - scaledCardHeight));
+
+      if (from === "battlefield") {
+        const targetPlayerId = viewedPlayer?.id || player?.id;
+        if (targetPlayerId) {
+          moveCard(sessionCode, targetPlayerId, "battlefield", "battlefield", cardId, clampedX, clampedY);
+        }
+      } else {
+        if (player) {
+          moveCard(sessionCode, player.id, from, "battlefield", cardId, clampedX, clampedY);
+        }
+      }
     }
-  }
+  };
 
-  const { x: finalX, y: finalY } = clamped(baseX, baseY);
-
-  // Jeśli przenosisz w obrębie battlefield — pozycjonowanie
-  if (safeFrom === "battlefield") {
-    moveCard(sessionCode, targetPlayerId, "battlefield", "battlefield", cardId, finalX, finalY);
-  } else {
-    moveCard(sessionCode, targetPlayerId, safeFrom, "battlefield", cardId, finalX, finalY);
-  }
-};
-
-
-//--------------------------------------------------------------------------------------------------------------------------------------------------------------------
   const handleDragStart = (e: DragEvent<HTMLDivElement>, card: CardOnField) => {
     if (viewedPlayerId !== null) return;
 
