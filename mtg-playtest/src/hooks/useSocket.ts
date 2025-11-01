@@ -94,7 +94,7 @@ socket.on("updateState", (updatedSession: Session) => {
         ? uniqueTokens
         : prev
     );
-  }, 50);
+  }, 150);
 });
 
     socket.on("updateSessionStats", (stats: SessionStats) => {
