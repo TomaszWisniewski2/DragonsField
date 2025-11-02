@@ -71,8 +71,8 @@ export const PlayerPanel: React.FC<PlayerPanelProps> = ({
 // Uproszczona logika dla dowódcy - zakłada, że dowódca jest w players[].commander
   // Zakładamy, że `targetPlayer.commander` to lista kart (CardType[])
   const hasCommander = sessionType === 'commander' && 
-            targetPlayer.commander && 
-            (Array.isArray(targetPlayer.commander) ? targetPlayer.commander.length > 0 : true); // Sprawdzamy czy coś tam jest
+            targetPlayer.commanders && 
+            (Array.isArray(targetPlayer.commanders) ? targetPlayer.commanders.length > 0 : true); // Sprawdzamy czy coś tam jest
 
   return (
     <div className={`player-panel-floating ${playerColorClass}`}>
