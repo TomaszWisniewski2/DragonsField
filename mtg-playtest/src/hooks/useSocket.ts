@@ -148,7 +148,7 @@ const joinSession = useCallback(
   );
 
   const startGame = useCallback(
-    (code: string, sessionType: SessionType) => emitEvent("startGame", { code, sessionType }),
+    (code: string, sessionType: SessionType, ) => emitEvent("startGame", { code, sessionType }),
     [emitEvent]
   );
 

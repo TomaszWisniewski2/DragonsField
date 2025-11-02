@@ -92,7 +92,13 @@
 .color-player-4.active-turn {
   text-decoration-color: var(--player-color) !important;
 }
+.color-player-5.active-turn {
+  text-decoration-color: var(--player-color) !important;
+}
 
+.color-player-6.active-turn {
+  text-decoration-color: var(--player-color) !important;
+}
 
 /* Nowe style dla panelu liczników */
 .relative {

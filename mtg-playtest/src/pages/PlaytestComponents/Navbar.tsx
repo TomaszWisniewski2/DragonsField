@@ -66,27 +66,51 @@ export default function Navbar({
 
 
  // === useEffect do obsługi skrótów klawiszowych (1, 2, 3, 4) ===
- useEffect(() => {
+useEffect(() => {
   const handleKeyDown = (event: KeyboardEvent) => {
-   // Sprawdź, czy klawisz to cyfra od '1' do '4'
-   if (event.key >= '1' && event.key <= '4') {
-    const playerIndex = parseInt(event.key, 10) - 1;
-    
-    // Upewnij się, że index jest prawidłowy i gracz istnieje w sesji
-    if (session.players[playerIndex]) {
-     const targetPlayer = session.players[playerIndex];
-     
-     // Jeśli to lokalny gracz, ignorujemy (zgodnie z logiką RMB)
-     if (targetPlayer.id === player?.id) {
-      return; 
-     }
+    // Sprawdź, czy klawisz to jeden z F1 do F6
+    if (event.key === 'F1' || event.key === 'F2' || event.key === 'F3' || event.key === 'F4' || event.key === 'F5' || event.key === 'F6') {
+      let playerIndex: number;
 
-     event.preventDefault(); 
-     
-     // Przełącz PlayerPanel dla znalezionego gracza
-     togglePlayerPanel(targetPlayer.id);
+      // Wyznacz indeks gracza na podstawie wciśniętego klawisza Fx
+      switch (event.key) {
+        case 'F1':
+          playerIndex = 0; // Klawisz 'F1' odpowiada indeksowi 0 (gracz 1)
+          break;
+        case 'F2':
+          playerIndex = 1; // Klawisz 'F2' odpowiada indeksowi 1 (gracz 2)
+          break;
+        case 'F3':
+          playerIndex = 2; // Klawisz 'F3' odpowiada indeksowi 2 (gracz 3)
+          break;
+        case 'F4':
+          playerIndex = 3; // Klawisz 'F4' odpowiada indeksowi 3 (gracz 4)
+          break; // <-- TUTAJ BYŁ BŁĄD: Brakowało break;
+        case 'F5':
+          playerIndex = 4; // Klawisz 'F5' odpowiada indeksowi 4 (gracz 5)
+          break; // <-- TUTAJ BYŁ BŁĄD: Brakowało break;
+        case 'F6':
+          playerIndex = 5; // Klawisz 'F6' odpowiada indeksowi 5 (gracz 6)
+          break;
+        default:
+          return; // Powinno być nieosiągalne, ale dla bezpieczeństwa
+      }
+    
+      // Upewnij się, że index jest prawidłowy i gracz istnieje w sesji
+      if (session.players[playerIndex]) {
+        const targetPlayer = session.players[playerIndex];
+        
+        // Jeśli to lokalny gracz, ignorujemy (zgodnie z logiką RMB)
+        if (targetPlayer.id === player?.id) {
+          return; 
+        }
+
+        event.preventDefault(); 
+        
+        // Przełącz PlayerPanel dla znalezionego gracza
+        togglePlayerPanel(targetPlayer.id);
+      }
     }
-   }
   };
 
   document.addEventListener('keydown', handleKeyDown);

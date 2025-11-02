@@ -1,6 +1,6 @@
 // src/pages/PlaytestComponents/Battlefield.tsx
 
-import React, { type DragEvent, useState, useEffect, type MouseEvent, useRef } from "react";
+import React, { type DragEvent, useState, useEffect, type MouseEvent, useRef, useCallback } from "react";
 // Upewnij się, że CardOnField i CardType są poprawnie zaimportowane
 import type { Player, CardOnField, Zone, CardType, TokenData } from "../../components/types";
 import Card from "../../components/Card";
@@ -97,12 +97,14 @@ export default function Battlefield({
 
   // ------------------------------------------
 
-  const closeCardPanel = () => {
+ // 🛑 UŻYCIE useCallback dla stabilności
+ const closeCardPanel = useCallback(() => {
     setIsCardPanelOpen(false);
-    setSelectedFieldCardForPanel(null); // Używamy nowego stanu
+    setSelectedFieldCardForPanel(null);
     setPanelPosition(null);
     setPanelDirection('up');
-  }
+ }, []);
+
 
   const handleCardContextMenu = (e: MouseEvent<HTMLDivElement>, cardOnField: CardOnField) => {
     e.preventDefault();
@@ -206,99 +208,78 @@ export default function Battlefield({
     }
   };
 
-  // --- EFFECT HOOKS ---
+  // --- OPTYMALIZACJA EFFECT HOOKS Z UŻYCIEM useCallback ---
 
-useEffect(() => {
-  const handleKeyDown = (e: KeyboardEvent) => {
-    // Sprawdzenie, czy bieżący gracz i przeglądany gracz są tym samym graczem
-    if (!player || player.id !== viewedPlayer?.id) {
-      return;
-    }
+// 1. STABILNY HANDLER DLA KLAWISZY (KLONOWANIE, ROTACJA)
+const handleKeyDown = useCallback((e: KeyboardEvent) => {
+  // Sprawdzenie, czy bieżący gracz i przeglądany gracz są tym samym graczem
+  if (!player || player.id !== viewedPlayer?.id) {
+    return;
+  }
 
-    if (e.key === 't') {
-      if (selectedCards.length > 0) {
-        selectedCards.forEach(card => {
-          // WAŻNE: W selectedCards masz CardType, ale rotateCard oczekuje ID CardOnField.
-          // Musisz mieć pewność, że w selectedCards masz ID CardOnField, 
-          // lub znaleźć CardOnField na podstawie CardType.id.
-          // Zakładamy, że w Twoim kodzie logika rotacji działa poprawnie 
-          // (lub że 'card.id' w selectedCards to już ID CardOnField).
-          // Zostawiamy jak jest dla 't' dla spójności z Twoim oryginalnym kodem.
-          rotateCard(sessionCode, player.id, card.id);
-        });
-      } else if (hoveredCardId) {
-        // hoveredCardId JEST CardOnField ID
-        rotateCard(sessionCode, player.id, hoveredCardId);
-      }
-    } 
-    
-    // 💡 NOWA OBSŁUGA KLAWISZA 'X' DLA KLONOWANIA
-    if (e.key === 'x') {
-      // Wyszukanie odpowiednich CardOnField, aby pobrać ich unikalne ID pola bitwy (CardOnField.id)
-      
-      const cardIdsToClone: string[] = [];
-      
-      if (selectedCards.length > 0) {
-        // Jeśli zaznaczono wiele kart, musimy znaleźć ich ID na polu bitwy (CardOnField.id).
-        // W selectedCards masz CardType. Zakładamy, że szukasz kart na polu bitwy.
-        // To jest newralgiczny punkt, ponieważ CardType może być taki sam dla wielu kart na polu.
-        // Najprostszym, ale potencjalnie niepoprawnym (zależnie od implementacji) 
-        // sposobem jest użycie ID CardType:
-        // selectedCards.forEach(card => cardIdsToClone.push(card.id));
-        
-        // LEPSZY SPOSÓB (zakłada, że masz dostęp do CardOnField i możesz je przefiltrować):
-        const fieldCards = viewedPlayer.battlefield;
-        
-        // Zbieramy unikalne ID CardOnField dla zaznaczonych CardType
-        fieldCards.forEach(fieldCard => {
-          if (selectedCards.some(selectedCard => selectedCard.id === fieldCard.card.id)) {
-            // Dodajemy CardOnField ID
-            cardIdsToClone.push(fieldCard.id); 
-          }
-        });
-        
-        // UWAGA: Powyższy kod sklonuje WSZYSTKIE karty DANEGO TYPU, 
-        // jeśli tylko JEDNA z nich jest zaznaczona w `selectedCards`.
-        // Jeśli `selectedCards` przechowuje ID CardOnField, to użyj po prostu:
-        // selectedCards.forEach(card => cardIdsToClone.push(card.id)); 
-        // *Ponieważ w Twoim kodzie dla 't' używasz 'card.id', zakładam, że selectedCards 
-        // powinno zawierać ID CardOnField, a nie CardType. 
-        // Jeśli tak nie jest, może być błąd w sposobie, w jaki ustawiasz selectedCards.*
-        
-        // Dla uproszczenia (zgodnego z Twoim użyciem 't'), użyjmy:
-        selectedCards.forEach(card => cardIdsToClone.push(card.id)); 
-
-      } else if (hoveredCardId) {
-        // Karta najechana - mamy jej unikalne ID na polu bitwy
-        cardIdsToClone.push(hoveredCardId); 
-      }
-      
-      // Wykonanie klonowania
-      cardIdsToClone.forEach(cardIdToClone => {
-        if (cardIdToClone) {
-          cloneCard(sessionCode, player.id, cardIdToClone); 
-        }
+  if (e.key === 't') {
+    if (selectedCards.length > 0) {
+      selectedCards.forEach(card => {
+        // Zakładamy, że 'card.id' jest ID CardOnField
+        rotateCard(sessionCode, player.id, card.id);
       });
+    } else if (hoveredCardId) {
+      // hoveredCardId JEST CardOnField ID
+      rotateCard(sessionCode, player.id, hoveredCardId);
     }
-
-    // ... pozostały kod handleKeyDown (jeśli istnieje) ...
-  };
-
-  const handleClickOutside = (event: MouseEvent | globalThis.MouseEvent) => {
-    const targetNode = event.target as Node;
-    if (isCardPanelOpen && cardPanelRef.current && !cardPanelRef.current.contains(targetNode)) {
-      closeCardPanel();
+  } 
+  
+  if (e.key === 'x') {
+    const cardIdsToClone: string[] = [];
+    
+    if (selectedCards.length > 0) {
+      // Zakładamy, że selectedCards przechowuje obiekty z ID CardOnField (dla spójności z 't')
+      selectedCards.forEach(card => cardIdsToClone.push(card.id)); 
+    } else if (hoveredCardId) {
+      // Karta najechana - mamy jej unikalne ID na polu bitwy
+      cardIdsToClone.push(hoveredCardId); 
     }
-  };
+    
+    // Wykonanie klonowania
+    cardIdsToClone.forEach(cardIdToClone => {
+      if (cardIdToClone) {
+        cloneCard(sessionCode, player.id, cardIdToClone); 
+      }
+    });
+  }
+}, [player, viewedPlayer, hoveredCardId, rotateCard, sessionCode, selectedCards, cloneCard]); 
+// isCardPanelOpen zostało usunięte z zależności!
 
+
+// 2. STABILNY HANDLER DLA KLIKNIĘCIA POZA PANELEM
+const handleClickOutside = useCallback((event: MouseEvent | globalThis.MouseEvent) => {
+  const targetNode = event.target as Node;
+  // Ponieważ isCardPanelOpen jest stanem, musimy go uwzględnić w zależnościach useCallback, 
+  // aby mieć jego najnowszą wartość, ale i tak zyskujemy na stabilności
+  if (isCardPanelOpen && cardPanelRef.current && !cardPanelRef.current.contains(targetNode)) {
+    closeCardPanel();
+  }
+}, [isCardPanelOpen, cardPanelRef, closeCardPanel]);
+
+
+// 3. EFFECT HOOK DLA KLAWISZY (dodawany tylko, gdy zmieni się funkcja handleKeyDown)
+useEffect(() => {
   window.addEventListener('keydown', handleKeyDown);
-  document.addEventListener("mousedown", handleClickOutside as (event: globalThis.MouseEvent) => void);
-
   return () => {
     window.removeEventListener('keydown', handleKeyDown);
+  };
+}, [handleKeyDown]);
+
+
+// 4. EFFECT HOOK DLA MYSZY (dodawany tylko, gdy zmieni się funkcja handleClickOutside)
+useEffect(() => {
+  // Używamy globalThis.MouseEvent, aby uniknąć problemów z typowaniem dla document.addEventListener
+  document.addEventListener("mousedown", handleClickOutside as (event: globalThis.MouseEvent) => void);
+  return () => {
     document.removeEventListener("mousedown", handleClickOutside as (event: globalThis.MouseEvent) => void);
   };
-}, [player, viewedPlayer, hoveredCardId, rotateCard, sessionCode, selectedCards, isCardPanelOpen, cloneCard]); // Dodano cloneCard do zależności
+}, [handleClickOutside]); // Zależny od handleClickOutside, które zmienia się, gdy isCardPanelOpen się zmieni
+
 
   // --- OBSŁUGA ZAZNACZANIA MYSZKĄ ---
 

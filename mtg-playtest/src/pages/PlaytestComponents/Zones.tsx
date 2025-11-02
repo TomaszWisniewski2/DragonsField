@@ -1,32 +1,27 @@
 // Zones.tsx
-import React from 'react';
+import React, { type DragEvent, type MouseEvent } from 'react';
 import Card from "../../components/Card";
 import type { Player, Zone, Session, CardType } from "../../components/types";
-// Usunięto nieużywany import, który powodował ostrzeżenia (LibraryPanelProps, GraveyardPanelProps, ExilePanelProps)
-// import { LibraryPanelProps, GraveyardPanelProps, ExilePanelProps } from "./Bottombar"; 
 
-// --- INTERFEJS PROPSÓW ZONES (OCZYSZCZONY) ---
+// --- INTERFEJS PROPSÓW ZONES ---
 
 interface ZonesProps {
   player: Player;
   session: Session;
-  // sessionCode został usunięty
   getPlayerColorClass: (id: string) => string;
   setDragOffset: React.Dispatch<React.SetStateAction<{ x: number; y: number }>>;
-  handleDrop: (e: React.DragEvent<HTMLDivElement>, toZone: Zone) => void;
+  handleDrop: (e: DragEvent<HTMLDivElement>, toZone: Zone) => void;
   handleCardHover: (card: CardType | null) => void;
   zoom: number;
 
-  // Stany i toggle (Tylko te użyte w renderze Zone lub do przełączania)
-  isLibraryPanelOpen: boolean; // Zostawione do wyświetlenia '▲' / '▼'
-  isGraveyardPanelOpen: boolean; // Zostawione do wyświetlenia '▲' / '▼'
-  isExilePanelOpen: boolean; // Zostawione do wyświetlenia '▲' / '▼'
-  isLibraryTopRevealed: boolean; // Używane do warunkowego renderowania karty
-  toggleLibraryPanel: (e: React.MouseEvent<HTMLElement>) => void; // Używane w onClick na labelu
-  toggleGraveyardPanel: (e: React.MouseEvent<HTMLElement>) => void; // Używane w onClick na labelu
-  toggleExilePanel: (e: React.MouseEvent<HTMLElement>) => void; // Używane w onClick na labelu
-  // toggleLibraryTopRevealed, Refy, i Funckje dla Paneli zostały usunięte
-
+  // Stany i toggle (dla renderowania ikonki ▲/▼ i obsługi kliknięcia)
+  isLibraryPanelOpen: boolean; 
+  isGraveyardPanelOpen: boolean; 
+  isExilePanelOpen: boolean; 
+  isLibraryTopRevealed: boolean; 
+  toggleLibraryPanel: (e: MouseEvent<HTMLElement>) => void; 
+  toggleGraveyardPanel: (e: MouseEvent<HTMLElement>) => void; 
+  toggleExilePanel: (e: MouseEvent<HTMLElement>) => void; 
 }
 
 const MTG_CARD_BACK_URL = "https://assets.moxfield.net/assets/images/missing-image.png";
@@ -34,7 +29,6 @@ const MTG_CARD_BACK_URL = "https://assets.moxfield.net/assets/images/missing-ima
 export default function Zones({
   player,
   session,
-  // Usunięto: sessionCode,
   getPlayerColorClass,
   setDragOffset,
   handleDrop,
@@ -47,14 +41,10 @@ export default function Zones({
   toggleLibraryPanel,
   toggleGraveyardPanel,
   toggleExilePanel,
-  // Usunięto: toggleLibraryTopRevealed,
-  // Usunięto: libraryPanelRef, graveyardPanelRef, exilePanelRef,
-  // Usunięto: toggleLibraryViewer, toggleGraveyardViewer, toggleExileViewer,
-  // Usunięto: handleMoveAllCards, shuffle, moveAllCardsToBottomOfLibrary,
 }: ZonesProps) {
 
-  // Funkcja pomocnicza do przeciągania
-  const handleZoneDragStart = (e: React.DragEvent<HTMLDivElement>, zoneCards: CardType[], fromZone: Zone) => {
+  // Funkcja pomocnicza do przeciągania z Graveyard/Exile (karta na górze, czyli ostatnia w tablicy)
+  const handleZoneDragStart = (e: DragEvent<HTMLDivElement>, zoneCards: CardType[], fromZone: Zone) => {
     e.stopPropagation();
     if (zoneCards.length > 0) {
         const rect = e.currentTarget.getBoundingClientRect();
@@ -62,34 +52,36 @@ export default function Zones({
             x: e.clientX - rect.left,
             y: e.clientY - rect.top,
         });
+        // Zgodnie z konwencją, ostatnia karta w tablicy (length - 1) jest kartą widoczną/górną
         const cardId = zoneCards[zoneCards.length - 1].id;
         e.dataTransfer.setData("cardId", cardId);
         e.dataTransfer.setData("from", fromZone);
     }
   };
 
-  // Logika dla Library musi być inna, bo przeciągamy górną kartę
-const handleLibraryDragStart = (e: React.DragEvent<HTMLDivElement>) => {
-  e.stopPropagation();
-  if (player.library.length > 0) {
-      // Górna karta to ostatni element — zgodnie z logiką serwera
-      const topCard = player.library[0];
-      const cardId = topCard.id;
-      e.dataTransfer.setData("cardId", cardId);
-      e.dataTransfer.setData("from", "library");
+  // Logika dla Library: Przeciągamy kartę na górze (indeks 0)
+  const handleLibraryDragStart = (e: DragEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    if (player.library.length > 0) {
+        // Górna karta to pierwszy element — player.library[0]
+        const topCard = player.library[0];
+        const cardId = topCard.id;
+        e.dataTransfer.setData("cardId", cardId);
+        e.dataTransfer.setData("from", "library");
 
-      // Obraz przeciągania
-      const dragImage = e.currentTarget.querySelector('.mtg-card-back') || e.currentTarget.querySelector('.card-component');
-      if (dragImage) {
-        e.dataTransfer.setDragImage(dragImage as Element, e.currentTarget.offsetWidth / 2, e.currentTarget.offsetHeight / 2);
-      }
-  }
-};
+        // Ustawienie obrazu przeciągania
+        const dragImage = e.currentTarget.querySelector('.mtg-card-back') || e.currentTarget.querySelector('.card-component');
+        if (dragImage) {
+          e.dataTransfer.setDragImage(dragImage as Element, e.currentTarget.offsetWidth / 2, e.currentTarget.offsetHeight / 2);
+        }
+    }
+  };
+
   // Logika hovera dla Library
   const handleLibraryMouseEnter = () => {
     // Podgląd górnej karty tylko, gdy jest ODKRYTA
     if (isLibraryTopRevealed && player.library.length > 0) {
-      handleCardHover(player.library[0]); // Zmieniono na player.library[0]
+      handleCardHover(player.library[0]);
     }
   };
 
@@ -169,7 +161,9 @@ const handleLibraryDragStart = (e: React.DragEvent<HTMLDivElement>) => {
           {player.graveyard.length > 0 && (
             <div
               draggable
+              // Przeciągamy ostatnią kartę (górną)
               onDragStart={(e) => handleZoneDragStart(e, player.graveyard, "graveyard")}
+              // Hover na ostatniej karcie (górnej)
               onMouseEnter={() => handleCardHover(player.graveyard[player.graveyard.length - 1])}
               onMouseLeave={() => handleCardHover(null)}
               onClick={(e) => e.stopPropagation()}
@@ -205,7 +199,9 @@ const handleLibraryDragStart = (e: React.DragEvent<HTMLDivElement>) => {
           {player.exile.length > 0 && (
             <div
               draggable
+              // Przeciągamy ostatnią kartę (górną)
               onDragStart={(e) => handleZoneDragStart(e, player.exile, "exile")}
+              // Hover na ostatniej karcie (górnej)
               onMouseEnter={() => handleCardHover(player.exile[player.exile.length - 1])}
               onMouseLeave={() => handleCardHover(null)}
               onClick={(e) => e.stopPropagation()}
@@ -220,9 +216,9 @@ const handleLibraryDragStart = (e: React.DragEvent<HTMLDivElement>) => {
             </div>
           )}
         </div>
-      </div>
+        </div>
 
-{/* ZONA - Commander Zone (Poprawka renderowania stosu) */}
+{/* ZONA - Commander Zone (Warstwowe renderowanie) */}
       {session.sessionType === "commander" && (
         <div className="zone-box-container">
           <span className="zone-label">Commander Zone ({player?.commanderZone.length ?? 0})</span>
@@ -230,19 +226,17 @@ const handleLibraryDragStart = (e: React.DragEvent<HTMLDivElement>) => {
             className="zone-box commander-zone"
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => handleDrop(e, "commanderZone")}
-            // WAŻNE: Dodaj styl 'position: relative' do CSS dla .zone-box.commander-zone!
+            // Wymaga CSS: .zone-box.commander-zone { position: relative; }
             style={{ position: 'relative' }} 
           >
             {player.commanderZone.length > 0 && (
-              // Używamy płytkiej kopii i mapowania, aby uzyskać wizualny stos.
-              // Karta [0] powinna być renderowana jako OSTATNIA (najwyższy z-index).
-              [...player.commanderZone].map((card, index) => { 
+              // Renderujemy karty od najniższej (ostatniej w tablicy) do najwyższej (indeks 0)
+              // Zapewnia to, że górna karta (indeks 0) jest renderowana jako OSTATNIA w DOM
+              player.commanderZone.slice().reverse().map((card, reversedIndex) => { 
                 
-                // Używamy oryginalnego indeksu. Karta[0] jest na górze, ma największy Z-Index, najmniejszy offset.
-                // Aby renderować ją jako ostatnią w DOM, odwracamy kolejność iteracji.
-                const originalIndex = index;
-                //const renderIndex = player.commanderZone.length - 1 - index; // 0 dla ostatniej (górnej) karty, max dla dolnej
-
+                // Oryginalny indeks: 0 dla górnej karty, N-1 dla dolnej
+                const originalIndex = player.commanderZone.length - 1 - reversedIndex;
+                
                 const isTopCard = originalIndex === 0;
 
                 // Offset jest zerowy dla karty na górze (originalIndex === 0)
@@ -251,13 +245,12 @@ const handleLibraryDragStart = (e: React.DragEvent<HTMLDivElement>) => {
                 return (
                   <div
                     key={card.id}
-                    // Zapewniamy, że wszystkie karty zajmują tyle samo miejsca, ale są pozycjonowane absolutnie
                     className="stack-card-wrapper"
                     style={{ 
                         position: 'absolute', // Kluczowe do nakładania
                         top: `${offset}px`, 
                         left: `${offset}px`, 
-                        zIndex: 10 + (player.commanderZone.length - originalIndex), // Wyższy Z-Index dla kart bliżej góry stosu
+                        zIndex: 10 + (player.commanderZone.length - originalIndex), // Wyższy Z-Index dla kart bliżej góry
                     }}
                     draggable={isTopCard} // Tylko górna karta jest draggable
                     onDragStart={(e) => {
@@ -281,17 +274,11 @@ const handleLibraryDragStart = (e: React.DragEvent<HTMLDivElement>) => {
                     />
                   </div>
                 );
-              }).reverse() // Odwracamy mapowaną tablicę, aby karta [0] była renderowana jako ostatnia w DOM
+            })
             )}
           </div>
         </div>
       )}
-
-      {/* RENDEROWANIE PANELI (Zostają tutaj, ale zagnieżdżone w nowym komponencie, aby przekazać wszystkie propsy) */}
-      
-      {/* Panele są przeniesione do Bottombar.tsx, aby uniknąć problemów z renderowaniem poza głównym drzewem komponentów */}
-      {/* LUB: Używamy portali, ale na potrzeby uproszczenia, zostawiamy te warunki w Zones.tsx, a same komponenty paneli przenieśmy do Bottombar.tsx */}
-
     </div>
   );
 }

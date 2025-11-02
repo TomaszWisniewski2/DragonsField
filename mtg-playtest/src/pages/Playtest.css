@@ -127,6 +127,12 @@ body {
 .color-player-4 {
   --player-color: #ffcc66; /* Żółty/złoty */
 }
+.color-player-5 {
+  --player-color: #f266ff; /* Żółty/złoty */
+}
+.color-player-6 {
+  --player-color: #ffffff; /* Żółty/złoty */
+}
 
 /* Nadaj kolory elementom na podstawie zmiennej CSS */
 .player-name,
@@ -308,6 +314,12 @@ body {
     border-color: #ffcc66;
     background-color: rgba(255, 204, 102, 0.2);
 }
+.selection-box.color-player-5 {
+  border-color: #f266ff; /* Żółty/złoty */
+}
+.selection-box.color-player-6 {
+  border-color: #ffffff; /* Żółty/złoty */
+}
 
 /* Styl dla zaznaczonych kart */
 .card-on-field.selected {
@@ -327,7 +339,12 @@ body {
 .card-on-field.selected.color-player-4 {
     outline: 2px solid #ffcc66;
 }
-
+.card-on-field.selected.color-player-5 {
+  outline: #f266ff; /* Żółty/złoty */
+}
+.card-on-field.selected.color-player-6 {
+  outline: #26063b; /* Żółty/złoty */
+}
 .commander-zone {
   border: 2px dashed #ffc107; /* Złoty kolor dla strefy dowódcy */
   background-color: rgba(255, 193, 7, 0.1);

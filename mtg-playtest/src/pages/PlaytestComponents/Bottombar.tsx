@@ -1,7 +1,7 @@
 // Bottombar.tsx
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback, type DragEvent } from "react";
 // Importujemy ZONES
-import Zones from "./Zones"; // Upewnij się, że ścieżka jest poprawna
+import Zones from "./Zones"; 
 
 import Card from "../../components/Card";
 import type { Player, Zone, Session, CardType, SortCriteria } from "../../components/types";
@@ -36,10 +36,10 @@ interface BottombarProps {
     from: Zone,
     to: Zone,
     cardId: string,
-    x?: number,         // Dodane
-  y?: number,         // Dodane
-  position?: number,  // Dodane
-  toBottom?: boolean  // Dodane
+    x?: number,         
+    y?: number,         
+    position?: number, 
+    toBottom?: boolean 
   ) => void;
   clearSelectedCards: () => void;
   handleCardHover: (card: CardType | null) => void;
@@ -106,14 +106,15 @@ export default function Bottombar({
   const bottomBarRef = useRef<HTMLDivElement>(null);
   const cardPanelRef = useRef<HTMLDivElement>(null);
 
-  const closeAllPanels = () => {
+  // 🛑 UŻYCIE useCallback dla stabilności
+  const closeAllPanels = useCallback(() => {
     setIsHandPanelOpen(false);
     setIsLibraryPanelOpen(false);
     setIsGraveyardPanelOpen(false);
     setIsExilePanelOpen(false);
     setIsCardPanelOpen(false);
     setPanelDirection('up');
-  };
+  }, []);
 
 
   const toggleLibraryTopRevealed = () => {
@@ -145,16 +146,19 @@ export default function Bottombar({
       let direction: 'up' | 'down';
       let finalY: number;
 
+      // Stały odstęp od krawędzi karty
+      const OFFSET = 10;
+      
       if (cardCenterY > middlePoint) {
         direction = 'up';
-        finalY = rect.top;
+        finalY = rect.top - OFFSET; // Otwieramy w górę
       } else {
         direction = 'down';
-        finalY = rect.bottom;
+        finalY = rect.bottom + OFFSET; // Otwieramy w dół
       }
 
       setPanelPosition({
-        x: rect.left + rect.width / 2,
+        x: rect.left + rect.width / 2, // Centrowanie
         y: finalY
       });
       setPanelDirection(direction);
@@ -205,43 +209,49 @@ export default function Bottombar({
     }
   };
 
-  // --- LOGIKA ZAMYKANIA PO KLIKNIĘCIU POZA PANELEM (BEZ ZMIAN) ---
-  useEffect(() => {
+  // --- LOGIKA ZAMYKANIA PO KLIKNIĘCIU POZA PANELEM (OPTYMALIZACJA) ---
+  // Lista stanów, które decydują o otwarciu paneli
+  const panelStates = { isHandPanelOpen, isLibraryPanelOpen, isGraveyardPanelOpen, isExilePanelOpen, isCardPanelOpen };
+
+  // 🛑 Stabilny handler zamykania paneli
+  const handleClickOutside = useCallback((event: globalThis.MouseEvent) => {
     const panelToggleSelectors = [
       '#hand-toggle',
       '#library-toggle',
       '#graveyard-toggle',
       '#exile-toggle',
     ];
+    const targetNode = event.target as HTMLElement;
 
-    const handleClickOutside = (event: globalThis.MouseEvent) => {
-      const targetNode = event.target as HTMLElement;
+    // Używamy stanów wewnątrz funkcji callback, ale ich zmiana wymusi nową funkcję
+    // Zależności zostały zaktualizowane, by używać stanów otwarcia/zamknięcia
+    const panelRefs = [
+      { isOpen: panelStates.isHandPanelOpen, ref: handPanelRef, close: () => setIsHandPanelOpen(false) },
+      { isOpen: panelStates.isLibraryPanelOpen, ref: libraryPanelRef, close: () => setIsLibraryPanelOpen(false) },
+      { isOpen: panelStates.isGraveyardPanelOpen, ref: graveyardPanelRef, close: () => setIsGraveyardPanelOpen(false) },
+      { isOpen: panelStates.isExilePanelOpen, ref: exilePanelRef, close: () => setIsExilePanelOpen(false) },
+      { isOpen: panelStates.isCardPanelOpen, ref: cardPanelRef, close: () => setIsCardPanelOpen(false) },
+    ];
 
-      if (panelToggleSelectors.some(selector => targetNode.closest(selector))) {
-        return;
+    if (panelToggleSelectors.some(selector => targetNode.closest(selector))) {
+      return;
+    }
+
+    panelRefs.forEach(({ isOpen, ref, close }) => {
+      if (isOpen && ref.current && !ref.current.contains(targetNode)) {
+        close();
       }
+    });
+  }, [panelStates.isHandPanelOpen, panelStates.isLibraryPanelOpen, panelStates.isGraveyardPanelOpen, panelStates.isExilePanelOpen, panelStates.isCardPanelOpen]);
 
-      const panelRefs = [
-        { isOpen: isHandPanelOpen, ref: handPanelRef, close: () => setIsHandPanelOpen(false) },
-        { isOpen: isLibraryPanelOpen, ref: libraryPanelRef, close: () => setIsLibraryPanelOpen(false) },
-        { isOpen: isGraveyardPanelOpen, ref: graveyardPanelRef, close: () => setIsGraveyardPanelOpen(false) },
-        { isOpen: isExilePanelOpen, ref: exilePanelRef, close: () => setIsExilePanelOpen(false) },
-        { isOpen: isCardPanelOpen, ref: cardPanelRef, close: () => setIsCardPanelOpen(false) },
-      ];
 
-      panelRefs.forEach(({ isOpen, ref, close }) => {
-        if (isOpen && ref.current && !ref.current.contains(targetNode)) {
-          close();
-        }
-      });
-    };
-
+  useEffect(() => {
     document.addEventListener("mousedown", handleClickOutside);
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isHandPanelOpen, isLibraryPanelOpen, isGraveyardPanelOpen, isExilePanelOpen, isCardPanelOpen]);
+  }, [handleClickOutside]); // Zależny od callbacka, który zmienia się, gdy zmieni się stan otwarcia/zamknięcia
 
   if (!player || !session) return null;
 
@@ -260,7 +270,7 @@ function findCardZoneInPlayer(player: Player | undefined, cardId: string): Zone 
 }
 
 // NOWA, BEZPIECZNA wersja handleDrop
-const handleDrop = (e: React.DragEvent<HTMLDivElement>, toZone: Zone) => {
+const handleDrop = (e: DragEvent<HTMLDivElement>, toZone: Zone) => {
   e.preventDefault();
   const isGroupDrag = e.dataTransfer.types.includes("text/json");
 
@@ -336,7 +346,6 @@ const handleDrop = (e: React.DragEvent<HTMLDivElement>, toZone: Zone) => {
 };
 
 
-
 //--------------------------------------------------------------
   // Funkcje do CardPanel, zostają w Bottombar, bo używają sessionCode, player.id i moveCard
   const handleMoveToGraveyardAction = (cardId: string) => {
@@ -361,10 +370,6 @@ const handleDrop = (e: React.DragEvent<HTMLDivElement>, toZone: Zone) => {
   const handleMovetoBottomofLibrary = (cardId: string) => {
   if (player && player.id === viewedPlayer?.id) {
    // Dół biblioteki (toBottom: true)
-   // UWAGA: Musisz dostosować sygnaturę propa moveCard w BottombarProps, 
-   // aby przyjmowała dodatkowe argumenty (x, y, position, toBottom), 
-   // tak jak zrobiliśmy to w useSocket.ts.
-   // Zakładając, że to zostało już zrobione, wywołanie wygląda tak:
    moveCard(sessionCode, player.id, "hand", "library", cardId, undefined, undefined, undefined, true); 
   }
  };
@@ -373,7 +378,6 @@ const handleDrop = (e: React.DragEvent<HTMLDivElement>, toZone: Zone) => {
  const handleMoveToBattlefieldFlippedAction = (cardId: string) => {
     if (player && player.id === viewedPlayer?.id) {
         // Zakładamy, że karta w panelu kontekstowym pochodzi z "hand"
-        // W przyszłości możesz potrzebować bardziej elastycznego rozwiązania, jeśli ten panel będzie używany dla kart z innych stref
         const fromZone: Zone = "hand";
         moveCardToBattlefieldFlipped(sessionCode, player.id, cardId, fromZone);
     }
@@ -412,16 +416,8 @@ onDragStart={(e) => {
     y: e.clientY - rect.top,
   });
 
-  // 🟢 Używamy ID instancji karty, jeśli jest dostępne
-  const cardUniqueId =
-    (c as unknown as { instanceId?: string; uid?: string }).instanceId ??
-    (c as unknown as { instanceId?: string; uid?: string }).uid ??
-    c.id;
-
-  // 🔍 Pomocniczy log
-  console.log("🟢 DragStart:", { cardUniqueId, from: "hand" });
-
-  e.dataTransfer.setData("cardId", cardUniqueId);
+  // Używamy ID instancji karty, jeśli jest dostępne (c.id jest zakładane jako unikalne)
+  e.dataTransfer.setData("cardId", c.id);
   e.dataTransfer.setData("from", "hand");
 }}
 
