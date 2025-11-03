@@ -59,6 +59,7 @@ interface BottombarProps {
   shuffle: (code: string, playerId: string) => void;
   draw: (code: string, playerId: string, count: number) => void;
   moveCardToBattlefieldFlipped: (code: string, playerId: string, cardId: string, from: Zone) => void
+  isMoving: boolean; // 🛑 DODANE: Flaga blokująca interakcje podczas ruchu karty
 }
 
 // Export PanelProps dla pozostałych komponentów
@@ -86,6 +87,7 @@ export default function Bottombar({
   shuffle,
   draw,
   moveCardToBattlefieldFlipped,
+  isMoving, // 🛑 DODANE
 }: BottombarProps) {
 
   // --- STANY I REFERENCJE ---
@@ -132,6 +134,10 @@ export default function Bottombar({
   const handleCardContextMenu = (e: React.MouseEvent<HTMLDivElement>, card: CardType) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (isMoving) { // 🛑 BLOKUJEMY, JEŚLI KARTA SIĘ PRZEMIESZCZA
+        return;
+    }
 
     if (isCardPanelOpen && selectedCardForPanel?.id === card.id) {
       setIsCardPanelOpen(false);
@@ -272,6 +278,11 @@ function findCardZoneInPlayer(player: Player | undefined, cardId: string): Zone 
 // NOWA, BEZPIECZNA wersja handleDrop
 const handleDrop = (e: DragEvent<HTMLDivElement>, toZone: Zone) => {
   e.preventDefault();
+
+  if (isMoving) { // 🛑 BLOKUJEMY DROP, JEŚLI KARTA SIĘ PRZEMIESZCZA
+    return;
+  }
+  
   const isGroupDrag = e.dataTransfer.types.includes("text/json");
 
   if (process.env.NODE_ENV === "development") {
@@ -349,12 +360,14 @@ const handleDrop = (e: DragEvent<HTMLDivElement>, toZone: Zone) => {
 //--------------------------------------------------------------
   // Funkcje do CardPanel, zostają w Bottombar, bo używają sessionCode, player.id i moveCard
   const handleMoveToGraveyardAction = (cardId: string) => {
+    if (isMoving) return; // 🛑 BLOKADA
     if (player && player.id === viewedPlayer?.id) {
       moveCard(sessionCode, player.id, "hand", "graveyard", cardId);
     }
   };
 
   const handleMoveToExileAction = (cardId: string) => {
+    if (isMoving) return; // 🛑 BLOKADA
     if (player && player.id === viewedPlayer?.id) {
       moveCard(sessionCode, player.id, "hand", "exile", cardId);
     }
@@ -362,12 +375,14 @@ const handleDrop = (e: DragEvent<HTMLDivElement>, toZone: Zone) => {
 
 
   const handleMovetoTopofLibrary = (cardId: string) => {
+    if (isMoving) return; // 🛑 BLOKADA
     if (player && player.id === viewedPlayer?.id) {
       moveCard(sessionCode, player.id, "hand", "library", cardId);
     }
   };
   
   const handleMovetoBottomofLibrary = (cardId: string) => {
+    if (isMoving) return; // 🛑 BLOKADA
   if (player && player.id === viewedPlayer?.id) {
    // Dół biblioteki (toBottom: true)
    moveCard(sessionCode, player.id, "hand", "library", cardId, undefined, undefined, undefined, true); 
@@ -376,6 +391,7 @@ const handleDrop = (e: DragEvent<HTMLDivElement>, toZone: Zone) => {
 
 
  const handleMoveToBattlefieldFlippedAction = (cardId: string) => {
+    if (isMoving) return; // 🛑 BLOKADA
     if (player && player.id === viewedPlayer?.id) {
         // Zakładamy, że karta w panelu kontekstowym pochodzi z "hand"
         const fromZone: Zone = "hand";
@@ -405,20 +421,18 @@ const handleDrop = (e: DragEvent<HTMLDivElement>, toZone: Zone) => {
             {player?.hand.map((c) => (
               <div
                 key={c.id}
-                draggable
+                draggable={!isMoving} // 🛑 BLOKUJEMY PRZECIĄGANIE
+                onDragStart={(e) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    setDragOffset({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    });
 
-
-onDragStart={(e) => {
-  e.stopPropagation();
-  const rect = e.currentTarget.getBoundingClientRect();
-  setDragOffset({
-    x: e.clientX - rect.left,
-    y: e.clientY - rect.top,
-  });
-
-  // Używamy ID instancji karty, jeśli jest dostępne (c.id jest zakładane jako unikalne)
-  e.dataTransfer.setData("cardId", c.id);
-  e.dataTransfer.setData("from", "hand");
+    // Używamy ID instancji karty, jeśli jest dostępne (c.id jest zakładane jako unikalne)
+    e.dataTransfer.setData("cardId", c.id);
+    e.dataTransfer.setData("from", "hand");
 }}
 
 
@@ -457,12 +471,16 @@ onDragStart={(e) => {
         toggleGraveyardPanel={toggleGraveyardPanel}
         toggleExilePanel={toggleExilePanel}
 
+        isMoving={isMoving} // 🛑 PRZEKAZUJEMY isMoving DO ZONES
       />
       {/* KONIEC WYDZIELONYCH ZON */}
         
       </div>
 
       {/* RENDEROWANIE PANELI */}
+// ... panele nie wymagają blokowania, bo ich akcje (np. sortowanie)
+// nie są blokowane przez isMoving, a akcje ruchu są blokowane na poziomie funkcji.
+// ...
 
       {isHandPanelOpen && (
         <HandPanel

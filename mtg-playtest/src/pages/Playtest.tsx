@@ -55,6 +55,7 @@ allAvailableTokens,
 createToken,
 cloneCard,
 moveCardToBattlefieldFlipped,
+isMoving, // 🛑 POPRAWKA B: Import nowej flagi blokującej
 } = useSocket(import.meta.env.VITE_SERVER_URL || "http://localhost:3001");
 
 const navigate = useNavigate();
@@ -556,6 +557,7 @@ rotateCard180={rotateCard180}
 flipCard={flipCard} 
 onCreateToken={handleCreateToken} 
 cloneCard={cloneCard}
+isMoving={isMoving} // 🛑 POPRAWKA B: Przekazanie flagi blokującej
 />
 <Sidebar
 startGame={handleOpenStartGameModal}
@@ -610,6 +612,7 @@ discardRandomCard={discardRandomCard}
 shuffle={handleShuffle}
 draw={draw}
 moveCardToBattlefieldFlipped={moveCardToBattlefieldFlipped}
+isMoving={isMoving} // 🛑 POPRAWKA B: Przekazanie flagi blokującej
 />
 
 {/* ZMIENIONE WARUNKOWE RENDEROWANIE DLA LIBRARY */}

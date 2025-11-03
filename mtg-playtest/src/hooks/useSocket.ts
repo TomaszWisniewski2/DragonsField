@@ -24,6 +24,10 @@ export const useSocket = (serverUrl: string) => {
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [allSessionStats, setAllSessionStats] = useState<SessionStats>({});
   const [allAvailableTokens, setAllAvailableTokens] = useState<TokenData[]>([]);
+  
+  // 🛑 POPRAWKA B: Flaga blokująca wielokrotne wysłanie ruchu karty
+  const [isMoving, setIsMoving] = useState(false); 
+  
   const socketRef = useRef<Socket | null>(null);
 
   // 🔌 Połączenie z serwerem
@@ -56,15 +60,16 @@ const log = (...args: Array<unknown>) => {
       log("❌ Rozłączono:", reason);
     });
 
-  // let updateTimeout: ReturnType<typeof setTimeout> | null = null;
-
 socket.on("updateState", (updatedSession: Session) => {
+  // 🛑 POPRAWKA B: RESETUJEMY FLAGĘ RUCHU: Otrzymaliśmy stan, więc możemy wysłać nowy ruch.
+  setIsMoving(false); 
+
   // 🔹 Odkładamy ustawienie stanu o 50 ms, by zgrupować wiele update'ów w jeden
  // if (updateTimeout) clearTimeout(updateTimeout);
 
   //updateTimeout = setTimeout(() => {
     setSession(updatedSession);
-    log("📥 [ZDEBOUNCED] Aktualizacja sesji:", updatedSession.code);
+    log("📥 [AKTUALIZACJA] Aktualizacja sesji:", updatedSession.code);
 
     const tokensFromDeck =
       updatedSession.players.find((p) => p.id === socket.id)?.initialDeck
@@ -94,7 +99,7 @@ socket.on("updateState", (updatedSession: Session) => {
         ? uniqueTokens
         : prev
     );
- // }, 150);
+  // }, 150);
 });
 
     socket.on("updateSessionStats", (stats: SessionStats) => {
@@ -103,6 +108,7 @@ socket.on("updateState", (updatedSession: Session) => {
     });
 
     socket.on("error", (message: string) => {
+      // 🛑 POPRAWKA C: Standardowa obsługa błędu z serwera
       console.error("Błąd serwera:", message);
       if (process.env.NODE_ENV === "development") alert(message);
     });
@@ -186,6 +192,12 @@ const moveCard = useCallback(
     position?: number,
     toBottom?: boolean
   ) => {
+    // 🛑 POPRAWKA B: Zablokuj wysyłanie kolejnych ruchów, jeśli poprzedni się synchronizuje
+    if (isMoving) {
+      console.warn("⚠️ moveCard() zablokowane: poprzedni ruch w trakcie synchronizacji. Prawdopodobna Race Condition.");
+      return;
+    }
+
     // 🧩 Walidacja frontendu
     if (!from) {
       console.warn("⚠️ moveCard() wywołane z pustym `from`!", {
@@ -209,9 +221,10 @@ const moveCard = useCallback(
       return;
     }
 
+    setIsMoving(true); // Ustaw flagę na true przed wysłaniem
     emitEvent("moveCard", { code, playerId, from, to, cardId, x, y, position, toBottom });
   },
-  [emitEvent]
+  [emitEvent, isMoving] // Dodano isMoving do dependencies
 );
 
 
@@ -321,6 +334,8 @@ const moveCard = useCallback(
     playerId,
     allSessionStats,
     allAvailableTokens,
+    // 🛑 NOWY EKSPORT FLAGI
+    isMoving, 
     createSession,
     joinSession,
     startGame,

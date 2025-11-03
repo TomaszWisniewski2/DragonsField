@@ -29,7 +29,8 @@ interface BattlefieldProps {
     to: Zone,
     cardId: string,
     x?: number,
-    y?: number
+    y?: number,
+    position?: number // DODANO opcjonalny position
   ) => void;
   player: Player | undefined;
   setDragOffset: React.Dispatch<React.SetStateAction<{ x: number; y: number }>>;
@@ -49,6 +50,7 @@ interface BattlefieldProps {
   flipCard: (code: string, playerId: string, cardId: string) => void;
   onCreateToken: (tokenData: TokenData) => void;
   cloneCard: (code: string, playerId: string, cardId: string) => void
+  isMoving: boolean; // Flaga blokująca wielokrotne wysłanie ruchu
 }
 
 export default function Battlefield({
@@ -77,6 +79,7 @@ export default function Battlefield({
   flipCard,
   onCreateToken,
   cloneCard,
+  isMoving, // 🛑 POBRANIE PROPIS MOVING
 }: BattlefieldProps) {
   const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
@@ -98,17 +101,20 @@ export default function Battlefield({
   // ------------------------------------------
 
  // 🛑 UŻYCIE useCallback dla stabilności
- const closeCardPanel = useCallback(() => {
+  const closeCardPanel = useCallback(() => {
     setIsCardPanelOpen(false);
     setSelectedFieldCardForPanel(null);
     setPanelPosition(null);
     setPanelDirection('up');
- }, []);
+  }, []);
 
 
   const handleCardContextMenu = (e: MouseEvent<HTMLDivElement>, cardOnField: CardOnField) => {
     e.preventDefault();
     e.stopPropagation();
+
+    // 🛑 POPRAWKA: Blokada, gdy trwa ruch
+    if (isMoving) return; 
 
     if (viewedPlayerId !== null) return;
 
@@ -155,7 +161,7 @@ export default function Battlefield({
 
   // 2. NOWA FUNKCJA AKCJI DO ODRWRACANIA KARTY
   const handleFlipCardAction = (cardId: string) => {
-    // Sprawdzamy, czy karta ma drugą stronę (dla bezpieczeństwa, choć przycisk w panelu powinien to już sprawdzić)
+    // Karta zostaje tylko odwrócona, to nie jest ruch
     const card = selectedFieldCardForPanel?.card;
     if (player && player.id === viewedPlayer?.id && card?.hasSecondFace) {
       flipCard(sessionCode, player.id, cardId);
@@ -164,36 +170,46 @@ export default function Battlefield({
   };
 
   const handleRotationAction = (cardId: string) => {
+    // Rotacja to szybka akcja, nie blokujemy
     if (player && player.id === viewedPlayer?.id) {
       rotateCard(sessionCode, player.id, cardId);
     }
   };
 
   const handleRotation180Action = (cardId: string) => {
+    // Rotacja to szybka akcja, nie blokujemy
     if (player && player.id === viewedPlayer?.id) {
       rotateCard180(sessionCode, player.id, cardId);
     }
   };
 
   const handleMoveToGraveyardAction = (cardId: string) => {
+    // 🛑 POPRAWKA: Blokada, gdy trwa ruch
+    if (isMoving) return; 
     if (player && player.id === viewedPlayer?.id) {
       moveCard(sessionCode, player.id, "battlefield", "graveyard", cardId);
     }
   };
 
   const handleMoveToHandAction = (cardId: string) => {
+    // 🛑 POPRAWKA: Blokada, gdy trwa ruch
+    if (isMoving) return; 
     if (player && player.id === viewedPlayer?.id) {
       moveCard(sessionCode, player.id, "battlefield", "hand", cardId);
     }
   };
 
   const handleMoveToExileAction = (cardId: string) => {
+    // 🛑 POPRAWKA: Blokada, gdy trwa ruch
+    if (isMoving) return; 
     if (player && player.id === viewedPlayer?.id) {
       moveCard(sessionCode, player.id, "battlefield", "exile", cardId);
     }
   };
 
   const handleMovetoTopofLibrary = (cardId: string) => {
+    // 🛑 POPRAWKA: Blokada, gdy trwa ruch
+    if (isMoving) return; 
     if (player && player.id === viewedPlayer?.id) {
       moveCard(sessionCode, player.id, "battlefield", "library", cardId);
     }
@@ -201,6 +217,7 @@ export default function Battlefield({
 
 
   const handleSetCardStatsAction = (powerValue: number, toughnessValue: number) => {
+    // Ustawienie statystyk to szybka akcja, nie blokujemy
     // Używamy ID z CardOnField
     if (player && player.id === viewedPlayer?.id && selectedFieldCardForPanel) {
       setCardStats(sessionCode, player.id, selectedFieldCardForPanel.id, powerValue, toughnessValue);
@@ -212,43 +229,41 @@ export default function Battlefield({
 
 // 1. STABILNY HANDLER DLA KLAWISZY (KLONOWANIE, ROTACJA)
 const handleKeyDown = useCallback((e: KeyboardEvent) => {
+  // Klawisze to szybkie akcje, nie blokujemy flagą move-specific
   // Sprawdzenie, czy bieżący gracz i przeglądany gracz są tym samym graczem
   if (!player || player.id !== viewedPlayer?.id) {
     return;
   }
 
-  if (e.key === 't') {
-    if (selectedCards.length > 0) {
-      selectedCards.forEach(card => {
-        // Zakładamy, że 'card.id' jest ID CardOnField
-        rotateCard(sessionCode, player.id, card.id);
-      });
+  // Funkcja pomocnicza do pobierania ID CardOnField
+  const getTargetCardIds = (): string[] => {
+    if (selectedCards.length > 0 && viewedPlayer?.battlefield) {
+      // Używamy logiki z group drag, aby znaleźć unikalne CardOnField.id dla wszystkich 
+      // instancji CardType, które zostały wybrane prostokątem zaznaczenia.
+      return viewedPlayer.battlefield
+        .filter(c => selectedCards.some(selectedC => selectedC.id === c.card.id))
+        .map(c => c.id); // Zwracamy unikalne ID CardOnField
     } else if (hoveredCardId) {
-      // hoveredCardId JEST CardOnField ID
-      rotateCard(sessionCode, player.id, hoveredCardId);
+      // Karta najechana - mamy jej unikalne ID na polu bitwy (CardOnField ID)
+      return [hoveredCardId]; 
     }
+    return [];
+  };
+
+  if (e.key === 't') {
+    // Rotacja: używamy ID CardOnField
+    getTargetCardIds().forEach(cardId => {
+      rotateCard(sessionCode, player.id, cardId);
+    });
   } 
   
   if (e.key === 'x') {
-    const cardIdsToClone: string[] = [];
-    
-    if (selectedCards.length > 0) {
-      // Zakładamy, że selectedCards przechowuje obiekty z ID CardOnField (dla spójności z 't')
-      selectedCards.forEach(card => cardIdsToClone.push(card.id)); 
-    } else if (hoveredCardId) {
-      // Karta najechana - mamy jej unikalne ID na polu bitwy
-      cardIdsToClone.push(hoveredCardId); 
-    }
-    
-    // Wykonanie klonowania
-    cardIdsToClone.forEach(cardIdToClone => {
-      if (cardIdToClone) {
-        cloneCard(sessionCode, player.id, cardIdToClone); 
-      }
+    // Klonowanie: używamy ID CardOnField
+    getTargetCardIds().forEach(cardIdToClone => {
+      cloneCard(sessionCode, player.id, cardIdToClone); 
     });
   }
 }, [player, viewedPlayer, hoveredCardId, rotateCard, sessionCode, selectedCards, cloneCard]); 
-// isCardPanelOpen zostało usunięte z zależności!
 
 
 // 2. STABILNY HANDLER DLA KLIKNIĘCIA POZA PANELEM
@@ -284,6 +299,7 @@ useEffect(() => {
   // --- OBSŁUGA ZAZNACZANIA MYSZKĄ ---
 
   const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
+    // Ta akcja nie inicjuje ruchu, nie blokujemy
     closeCardPanel();
 
     if (e.target === e.currentTarget && battlefieldRef.current) {
@@ -296,6 +312,7 @@ useEffect(() => {
   };
 
   const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
+    // Ta akcja nie inicjuje ruchu, nie blokujemy
     if (isSelecting && battlefieldRef.current) {
       const rect = battlefieldRef.current.getBoundingClientRect();
       const currentX = e.clientX - rect.left;
@@ -329,7 +346,10 @@ useEffect(() => {
           const cardId = htmlCardEl.getAttribute('data-card-id');
           const foundCard = viewedPlayer?.battlefield.find(c => c.id === cardId)?.card;
           if (foundCard) {
-            cardsInSelection.push(foundCard);
+            // Upewniamy się, że nie duplikujemy CardType w tablicy
+            if (!cardsInSelection.some(c => c.id === foundCard.id)) {
+               cardsInSelection.push(foundCard);
+            }
           }
         }
       });
@@ -338,6 +358,7 @@ useEffect(() => {
   };
 
   const handleMouseUp = () => {
+    // Ta akcja nie inicjuje ruchu, nie blokujemy
     setIsSelecting(false);
     setSelectionRect(null);
   };
@@ -358,6 +379,9 @@ function findCardZoneInPlayer(player: Player | undefined, cardId: string): Zone 
 
 const handleDrop = (e: DragEvent<HTMLDivElement>) => {
   e.preventDefault();
+  // 🛑 POPRAWKA: Blokada, gdy trwa ruch
+  if (isMoving) return; 
+
   if (!battlefieldRef.current || !player) return;
 
   const dropZoneRect = battlefieldRef.current.getBoundingClientRect();
@@ -371,7 +395,7 @@ const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     if (tokenDataString) {
       try {
         const tokenData: TokenData = JSON.parse(tokenDataString);
-        onCreateToken(tokenData);
+        onCreateToken(tokenData); // Tworzenie tokena to inna, szybka operacja
         return;
       } catch (error) {
         console.error("❌ Błąd parsowania danych tokenu:", error);
@@ -468,19 +492,26 @@ const handleDrop = (e: DragEvent<HTMLDivElement>) => {
 
 //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
   const handleDragStart = (e: DragEvent<HTMLDivElement>, card: CardOnField) => {
+    // 🛑 POPRAWKA: Blokada, gdy trwa ruch
+    if (isMoving) {
+      e.preventDefault();
+      return;
+    }
+
     if (viewedPlayerId !== null) return;
 
     closeCardPanel();
 
     const rect = e.currentTarget.getBoundingClientRect();
-    const isSelected = selectedCards.some(c => c.id === card.card.id);
+    // Sprawdzamy, czy KartaOnField ma CardType, które znajduje się w selectedCards
+    const isSelected = selectedCards.some(c => c.id === card.card.id); 
 
     if (isSelected && selectedCards.length > 1) {
       setIsDraggingGroup(true);
       const draggedCardsWithPos = viewedPlayer?.battlefield
         .filter(c => selectedCards.some(selectedC => selectedC.id === c.card.id))
         .map(c => ({
-          cardId: c.id,
+          cardId: c.id, // CardOnField ID
           x: c.x,
           y: c.y,
           cardType: c.card
@@ -530,11 +561,11 @@ const handleDrop = (e: DragEvent<HTMLDivElement>) => {
   };
 
  // 🌟 POPRAWIONA FUNKCJA AKCJI DLA KLONOWANIA
- const handleCloneCardAction = (cardId: string) => {
+  const handleCloneCardAction = (cardId: string) => {
   // cardId to ID CardOnField przekazane z panelu
   if (player && player.id === viewedPlayer?.id) {
-   // Wywołujemy prop cloneCard z poprawnymi argumentami
-   cloneCard(sessionCode, player.id, cardId);
+    // Wywołujemy prop cloneCard z poprawnymi argumentami
+    cloneCard(sessionCode, player.id, cardId);
   }
   //closeCardPanel(); // Zamykamy panel po sklonowaniu
  };
@@ -579,12 +610,12 @@ const handleDrop = (e: DragEvent<HTMLDivElement>) => {
               position: "absolute",
               left: c.x,
               top: c.y,
-              cursor: viewedPlayerId === null ? "grab" : "default",
+              cursor: viewedPlayerId === null && !isMoving ? "grab" : "default", // Zmiana kursora
               transform: `scale(${zoom / 100}) rotate(${c.rotation}deg)`,
               transformOrigin: 'center center',
               zIndex: selectedCards.some(card => card.id === c.card.id) ? 10 : 5
             }}
-            draggable={viewedPlayerId === null}
+            draggable={viewedPlayerId === null && !isMoving} // 🛑 Blokowanie drag&drop
             onDragStart={(e) => handleDragStart(e, c)}
             onDoubleClick={() => handleCardRotation(c.id)}
             onContextMenu={(e) => handleCardContextMenu(e, c)}
@@ -662,6 +693,7 @@ const handleDrop = (e: DragEvent<HTMLDivElement>) => {
           rotateCard180={handleRotation180Action}
           flipCard={handleFlipCardAction}
           cloneCard={handleCloneCardAction}
+          //isMoving={isMoving} // ✅ DODANO: Przekazanie flagi blokującej do Panelu
         />
       )}
     </div>

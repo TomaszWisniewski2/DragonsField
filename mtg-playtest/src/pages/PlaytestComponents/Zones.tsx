@@ -22,6 +22,7 @@ interface ZonesProps {
   toggleLibraryPanel: (e: MouseEvent<HTMLElement>) => void; 
   toggleGraveyardPanel: (e: MouseEvent<HTMLElement>) => void; 
   toggleExilePanel: (e: MouseEvent<HTMLElement>) => void; 
+  isMoving: boolean; // 🛑 DODANE
 }
 
 const MTG_CARD_BACK_URL = "https://assets.moxfield.net/assets/images/missing-image.png";
@@ -41,6 +42,7 @@ export default function Zones({
   toggleLibraryPanel,
   toggleGraveyardPanel,
   toggleExilePanel,
+  isMoving, // 🛑 DODANE
 }: ZonesProps) {
 
   // Funkcja pomocnicza do przeciągania z Graveyard/Exile (karta na górze, czyli ostatnia w tablicy)
@@ -114,7 +116,7 @@ export default function Zones({
         >
           {player.library.length > 0 && (
             <div
-              draggable
+              draggable={!isMoving} // 🛑 ZMIANA: Wyłączamy przeciąganie, gdy inna karta jest przenoszona
               onDragStart={handleLibraryDragStart}
               onMouseEnter={handleLibraryMouseEnter}
               onMouseLeave={handleLibraryMouseLeave}
@@ -160,7 +162,7 @@ export default function Zones({
         >
           {player.graveyard.length > 0 && (
             <div
-              draggable
+              draggable={!isMoving} // 🛑 ZMIANA: Wyłączamy przeciąganie, gdy inna karta jest przenoszona
               // Przeciągamy ostatnią kartę (górną)
               onDragStart={(e) => handleZoneDragStart(e, player.graveyard, "graveyard")}
               // Hover na ostatniej karcie (górnej)
@@ -198,7 +200,7 @@ export default function Zones({
         >
           {player.exile.length > 0 && (
             <div
-              draggable
+              draggable={!isMoving} // 🛑 ZMIANA: Wyłączamy przeciąganie, gdy inna karta jest przenoszona
               // Przeciągamy ostatnią kartę (górną)
               onDragStart={(e) => handleZoneDragStart(e, player.exile, "exile")}
               // Hover na ostatniej karcie (górnej)
@@ -216,7 +218,7 @@ export default function Zones({
             </div>
           )}
         </div>
-        </div>
+      </div>
 
 {/* ZONA - Commander Zone (Warstwowe renderowanie) */}
       {session.sessionType === "commander" && (
@@ -252,9 +254,10 @@ export default function Zones({
                         left: `${offset}px`, 
                         zIndex: 10 + (player.commanderZone.length - originalIndex), // Wyższy Z-Index dla kart bliżej góry
                     }}
-                    draggable={isTopCard} // Tylko górna karta jest draggable
+                    // 🛑 ZMIANA: Tylko górna karta i tylko gdy nie ma aktywnego przeciągania
+                    draggable={isTopCard && !isMoving} 
                     onDragStart={(e) => {
-                        if (isTopCard) {
+                        if (isTopCard && !isMoving) { 
                             e.stopPropagation();
                             const cardId = card.id;
                             e.dataTransfer.setData("cardId", cardId);
@@ -274,7 +277,7 @@ export default function Zones({
                     />
                   </div>
                 );
-            })
+              })
             )}
           </div>
         </div>
