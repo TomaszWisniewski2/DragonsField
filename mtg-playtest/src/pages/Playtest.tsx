@@ -55,7 +55,8 @@ allAvailableTokens,
 createToken,
 cloneCard,
 moveCardToBattlefieldFlipped,
-isMoving, // 🛑 POPRAWKA B: Import nowej flagi blokującej
+isMoving,
+disconnectPlayer // 🛑 POPRAWKA B: Import nowej flagi blokującej
 } = useSocket(import.meta.env.VITE_SERVER_URL || "http://localhost:3001");
 
 const navigate = useNavigate();
@@ -394,8 +395,15 @@ const handleCloseExitGameModal = () => {
 setIsExitGameModalOpen(false);
 };
 
+// ZMIENIONA FUNKCJA: Wywołuje disconnectPlayer ZANIM nastąpi nawigacja
 const handleConfirmExitGame = () => {
-navigate('/'); // <-- Nawigacja do strony głównej po potwierdzeniu
+if (player && session) {
+    // 1. Wywołaj funkcję rozłączającą gracza na serwerze (trwale usuwa gracza)
+    disconnectPlayer(session.code, player.id);
+    console.log(`Gracz ${player.name} (${player.id}) opuszcza sesję ${session.code} i zostanie usunięty.`);
+}
+// 2. Nawigacja do strony głównej (kluczowe, aby użytkownik opuścił widok gry)
+navigate('/');
 handleCloseExitGameModal();
 };
 ////////////////////////////////////////////////////////

@@ -60,6 +60,12 @@ const log = (...args: Array<unknown>) => {
       log("❌ Rozłączono:", reason);
     });
 
+        socket.on("disconnect2", (reason) => {
+      setConnected(false);
+      setSession(null);
+      log("❌ Rozłączono:", reason);
+    });
+    
 socket.on("updateState", (updatedSession: Session) => {
   // 🛑 POPRAWKA B: RESETUJEMY FLAGĘ RUCHU: Otrzymaliśmy stan, więc możemy wysłać nowy ruch.
   setIsMoving(false); 
@@ -328,6 +334,11 @@ const moveCard = useCallback(
     [emitEvent]
   );
 
+  const disconnectPlayer = useCallback(
+    (code: string, playerId: string) => emitEvent("disconnectPlayer", { code, playerId }),
+    [emitEvent]
+);
+
   return {
     connected,
     session,
@@ -361,5 +372,6 @@ const moveCard = useCallback(
     createToken,
     cloneCard,
     moveCardToBattlefieldFlipped,
+    disconnectPlayer,
   };
 };
