@@ -6,8 +6,8 @@ body {
 
 .playtest-container {
   display: grid;
-  grid-template-columns: 1fr 180px;
-  grid-template-rows: 49px 1fr 190px;
+  grid-template-columns: 1fr 160px;
+  grid-template-rows: 35px 1fr 197px;
   height: 98vh;
   /* Zmieniamy szerokość na 100vw, aby obejść problem z 98.5vw */
   /* width: 100vw;  */
@@ -50,11 +50,26 @@ body {
   position: relative;
 }
 .battlefield-area {
-  
   flex: 1;
   position: relative;
   border: 2px solid #ffffff;
-  background: #201e1e;
+  background-color: #201e1e;
+
+  /* --- 💡 NOWE STYLE DLA SIATKI (LINIE) 💡 --- */
+  --grid-size: 20.2px;
+  --grid-color: rgba(255, 255, 255, 0.037); /* Używamy koloru, który potwierdziłeś, że działa */
+
+  /* Zaktualizowana, bardziej niezawodna składnia 'repeating-linear-gradient'.
+    Mówi ona: "rysuj linię koloru '--grid-color' od 0 do 1px, 
+    a następnie rysuj przezroczystość od 1px do końca rozmiaru siatki".
+    Robimy to w obu kierunkach (0deg = poziomo, 90deg = pionowo).
+  */
+  background-image:
+    repeating-linear-gradient(0deg, var(--grid-color), var(--grid-color) 1px, transparent 1px, transparent var(--grid-size)),
+    repeating-linear-gradient(90deg, var(--grid-color), var(--grid-color) 1px, transparent 1px, transparent var(--grid-size));
+  
+  background-size: var(--grid-size) var(--grid-size);
+  /* --- 💡 KONIEC NOWYCH STYLI 💡 --- */
 }
 
 /* Sidebar */

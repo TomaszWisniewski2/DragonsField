@@ -14,10 +14,10 @@ interface GraveyardViewerProps {
 
 export default function GraveyardViewer({ 
   player,
-   toggleGraveyardViewer,
-    playerColorClass,
-    isOwned
-   }: GraveyardViewerProps) {
+  toggleGraveyardViewer,
+  playerColorClass,
+  isOwned
+ }: GraveyardViewerProps) {
   const [hoveredCardImage, setHoveredCardImage] = useState<string | null>(
     player && player.graveyard.length > 0 ? player.graveyard[0].image || null : null
   );
@@ -26,11 +26,18 @@ export default function GraveyardViewer({
 
   if (!player) return null;
   const canDrag = isOwned;
+
+  // ✅ NOWA LOGIKA: Filtrowanie kart
+  const filteredCards = player.graveyard.filter(card =>
+    card.name.toLowerCase().includes(filterText.toLowerCase())
+  );
+
   return (
     <div className={`library-viewer-overlay ${playerColorClass}`}> {/* Dodaj klasę koloru */}
       <div className="library-viewer-container">
         <div className="library-viewer-header">
-          <span>Viewing Graveyard ({player.graveyard.length})</span>
+          {/* ✅ ZMIANA: Używamy filteredCards.length */}
+          <span>Viewing Graveyard ({filteredCards.length} of {player.graveyard.length})</span>
           <button onClick={toggleGraveyardViewer}>Close</button>
         </div>
         <div className="library-viewer-content">
@@ -39,11 +46,16 @@ export default function GraveyardViewer({
           </div>
 
           <ul className="card-list">
-            {player.graveyard.map((card) => (
+            {/* ✅ ZMIANA: Mapujemy po filteredCards */}
+            {filteredCards.map((card) => (
               <li
                 key={card.id}
-                draggable
+                draggable={canDrag} // ✅ POPRAWKA: Używamy canDrag
                 onDragStart={(e) => {
+                  if (!canDrag) { // ✅ POPRAWKA: Dodatkowe zabezpieczenie
+                    e.preventDefault();
+                    return;
+                  }
                   e.dataTransfer.setData("cardId", card.id);
                   e.dataTransfer.setData("from", "graveyard"); // Ważne: Zmiana na "graveyard"
 

@@ -109,7 +109,7 @@ export default function Playtest() {
   const viewedCommanderPlayer = session?.players.find(p => p.id === viewedCommanderPlayerId) || player;
 
   const [isStartGameModalOpen, setIsStartGameModalOpen] = useState(false);
-  const [selectedCards, setSelectedCards] = useState<CardType[]>([]);
+  const [selectedCards, setSelectedCards] = useState<string[]>([]);
 
   const [hoveredCard, setHoveredCard] = useState<CardType | null>(null);
   const [hoverTimer, setHoverTimer] = useState<NodeJS.Timeout | null>(null);

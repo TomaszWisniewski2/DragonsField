@@ -7,7 +7,8 @@
     position: relative;
     /* Usuwamy width: 100px; i zastępujemy go zmienną */
     width: var(--card-base-width);
-    height: calc(var(--card-base-width) * 1.4); /* Typowa proporcja MTG */
+    height: calc(var(--card-base-width) * 1.4);
+     /* Typowa proporcja MTG */
     
     text-align: center;
     border: 1px solid #000;

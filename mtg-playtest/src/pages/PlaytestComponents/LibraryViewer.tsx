@@ -21,13 +21,17 @@ export default function LibraryViewer({ player, toggleLibraryViewer, playerColor
  if (!player) return null;
 
  const canDrag = isOwned; // Tylko właściciel może przeciągać z Biblioteki
-
+// ✅ NOWA LINIA: Dodanie filtrowania
+  const filteredCards = player.library.filter(card =>
+    card.name.toLowerCase().includes(filterText.toLowerCase())
+  );
  return (
   <div className={`library-viewer-overlay ${playerColorClass}`}>
    <div className="library-viewer-container">
 
     <div className="library-viewer-header">
-     <span>Viewing Library ({player.library.length})</span>
+     {/* ✅ ZMIANA: Wyświetlanie liczby przefiltrowanych kart */}
+          <span>Viewing Library ({filteredCards.length} of {player.library.length})</span>
      <button onClick={toggleLibraryViewer}>Close</button>
     </div>
     
@@ -37,7 +41,7 @@ export default function LibraryViewer({ player, toggleLibraryViewer, playerColor
      </div>
 
      <ul className="card-list">
-      {player.library.map((card) => (
+      {filteredCards.map((card) => (
        <li
         key={card.id}
         draggable={canDrag} // Przeciąganie tylko jeśli jesteś właścicielem

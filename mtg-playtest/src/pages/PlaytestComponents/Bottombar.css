@@ -182,7 +182,7 @@
      Jeśli chcesz stałą, maksymalną szerokość, użyj max-width lub stałej szerokości. 
      Upewnij się, że .fixed-hand-width w .hand spełnia to, np. max-width: 600px; */
   flex: 1; 
-  /* max-width: 600px; <--- Rozważ dodanie tego, jeśli flex: 1 jest za szeroki */
+  /* max-width: 700px;  */
   display: flex;
   flex-direction: column;
   overflow: hidden; /* Utrzymuje porządek wewnątrz Bottombar */
@@ -192,19 +192,35 @@
   gap: 4px;
   padding: 1px;
   
-  /* --- KLUCZOWE ZMIANY DLA SCROLLOWANIA --- */
-  /* Upewnij się, że ten element nie jest ograniczony wysokością/szerokością tak, aby
-     karty mogły go "rozciągnąć" poza widoczne granice .hand, 
-     a następnie przewiń ten element. */
-  
   /* Ustawienie dla przewijania poziomego, gdy zawartość przekroczy szerokość */
   overflow-x: auto; 
   /* Ukrywa przewijanie pionowe, jeśli przypadkiem by się pojawiło */
   overflow-y: hidden; 
   /* Aby upewnić się, że karty się nie łamią na następną linię */
   white-space: nowrap; 
+  /* --- ✅ NOWE STYLE --- */
+  /* Ustawia minimalną wysokość równą karcie (139px z Playtest.css) */
+  min-height: 139px; 
+  /* Gwarantuje, że strefa wypełni dostępną przestrzeń w kontenerze .hand */
+  flex-grow: 1;
+  /* Centruje placeholder w pionie, gdy jest obecny */
+  align-items: center;
 }
-
+.hand-empty-placeholder {
+  width: 100%;
+  text-align: center;
+  font-style: italic;
+  font-size: 14px;
+  color: #666; /* Ciemnoszary tekst */
+  
+  /* Naśladujemy wygląd pustych .zone-box */
+  border: 2px dashed #666;
+  border-radius: 5px;
+  
+  /* Dopasowujemy padding, aby tekst był mniej więcej na środku */
+  padding: 50px 10px; 
+  margin: 5px; /* Dodajemy mały margines, aby pasował do kart */
+}
 /* Opcjonalnie: Jeśli używasz klasy scrollable-hand-cards z poprzedniego kroku */
 /*
 .scrollable-hand-cards {

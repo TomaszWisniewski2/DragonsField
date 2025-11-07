@@ -37,8 +37,8 @@ interface BattlefieldProps {
   sessionCode: string;
   rotateCard: (code: string, playerId: string, cardId: string) => void;
   rotateCard180: (code: string, playerId: string, cardId: string) => void;
-  setSelectedCards: (cards: CardType[]) => void;
-  selectedCards: CardType[];
+  setSelectedCards: (ids: string[]) => void; // ✅ ZMIANA: Oczekuje string[]
+  selectedCards: string[]; // ✅ ZMIANA: Jest string[]
   playerColorClass: string;
   handleCardHover: (card: CardType | null) => void;
   incrementCardStats: (code: string, playerId: string, cardId: string) => void;
@@ -100,8 +100,8 @@ export default function Battlefield({
 
   // ------------------------------------------
 
- // 🛑 UŻYCIE useCallback dla stabilności
-  const closeCardPanel = useCallback(() => {
+  // 🛑 UŻYCIE useCallback dla stabilności
+   const closeCardPanel = useCallback(() => {
     setIsCardPanelOpen(false);
     setSelectedFieldCardForPanel(null);
     setPanelPosition(null);
@@ -227,73 +227,76 @@ export default function Battlefield({
 
   // --- OPTYMALIZACJA EFFECT HOOKS Z UŻYCIEM useCallback ---
 
-// 1. STABILNY HANDLER DLA KLAWISZY (KLONOWANIE, ROTACJA)
-const handleKeyDown = useCallback((e: KeyboardEvent) => {
-  // Klawisze to szybkie akcje, nie blokujemy flagą move-specific
-  // Sprawdzenie, czy bieżący gracz i przeglądany gracz są tym samym graczem
-  if (!player || player.id !== viewedPlayer?.id) {
-    return;
-  }
-
-  // Funkcja pomocnicza do pobierania ID CardOnField
-  const getTargetCardIds = (): string[] => {
-    if (selectedCards.length > 0 && viewedPlayer?.battlefield) {
-      // Używamy logiki z group drag, aby znaleźć unikalne CardOnField.id dla wszystkich 
-      // instancji CardType, które zostały wybrane prostokątem zaznaczenia.
-      return viewedPlayer.battlefield
-        .filter(c => selectedCards.some(selectedC => selectedC.id === c.card.id))
-        .map(c => c.id); // Zwracamy unikalne ID CardOnField
-    } else if (hoveredCardId) {
-      // Karta najechana - mamy jej unikalne ID na polu bitwy (CardOnField ID)
-      return [hoveredCardId]; 
+  // 1. STABILNY HANDLER DLA KLAWISZY (KLONOWANIE, ROTACJA)
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    // ✅ POPRAWKA: Ignoruj skróty, jeśli użytkownik pisze w polu tekstowym
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+      return;
     }
-    return [];
-  };
+    // --- Koniec poprawki ---
 
-  if (e.key === 't') {
-    // Rotacja: używamy ID CardOnField
-    getTargetCardIds().forEach(cardId => {
-      rotateCard(sessionCode, player.id, cardId);
-    });
-  } 
-  
-  if (e.key === 'x') {
-    // Klonowanie: używamy ID CardOnField
-    getTargetCardIds().forEach(cardIdToClone => {
-      cloneCard(sessionCode, player.id, cardIdToClone); 
-    });
-  }
-}, [player, viewedPlayer, hoveredCardId, rotateCard, sessionCode, selectedCards, cloneCard]); 
+    // Sprawdzenie, czy bieżący gracz i przeglądany gracz są tym samym graczem
+    if (!player || player.id !== viewedPlayer?.id) {
+      return;
+    }
 
+    // Funkcja pomocnicza do pobierania ID CardOnField
+    const getTargetCardIds = (): string[] => {
+      if (selectedCards.length > 0) { // ✅ POPRAWIONA LOGIKA
+        // 'selectedCards' to JUŻ jest tablica ID (string[])
+        return selectedCards;
+      } else if (hoveredCardId) {
+        // Karta najechana - mamy jej unikalne ID na polu bitwy (CardOnField ID)
+        return [hoveredCardId]; 
+      }
+      return [];
+    };
 
-// 2. STABILNY HANDLER DLA KLIKNIĘCIA POZA PANELEM
-const handleClickOutside = useCallback((event: MouseEvent | globalThis.MouseEvent) => {
-  const targetNode = event.target as Node;
-  // Ponieważ isCardPanelOpen jest stanem, musimy go uwzględnić w zależnościach useCallback, 
-  // aby mieć jego najnowszą wartość, ale i tak zyskujemy na stabilności
-  if (isCardPanelOpen && cardPanelRef.current && !cardPanelRef.current.contains(targetNode)) {
-    closeCardPanel();
-  }
-}, [isCardPanelOpen, cardPanelRef, closeCardPanel]);
-
-
-// 3. EFFECT HOOK DLA KLAWISZY (dodawany tylko, gdy zmieni się funkcja handleKeyDown)
-useEffect(() => {
-  window.addEventListener('keydown', handleKeyDown);
-  return () => {
-    window.removeEventListener('keydown', handleKeyDown);
-  };
-}, [handleKeyDown]);
+    if (e.key === 't') {
+      // Rotacja: używamy ID CardOnField
+      getTargetCardIds().forEach(cardId => {
+        rotateCard(sessionCode, player.id, cardId);
+      });
+    } 
+    
+    if (e.key === 'x') {
+      // Klonowanie: używamy ID CardOnField
+      getTargetCardIds().forEach(cardIdToClone => {
+        cloneCard(sessionCode, player.id, cardIdToClone); 
+      });
+    }
+  }, [player, viewedPlayer, hoveredCardId, rotateCard, sessionCode, selectedCards, cloneCard]); 
 
 
-// 4. EFFECT HOOK DLA MYSZY (dodawany tylko, gdy zmieni się funkcja handleClickOutside)
-useEffect(() => {
-  // Używamy globalThis.MouseEvent, aby uniknąć problemów z typowaniem dla document.addEventListener
-  document.addEventListener("mousedown", handleClickOutside as (event: globalThis.MouseEvent) => void);
-  return () => {
-    document.removeEventListener("mousedown", handleClickOutside as (event: globalThis.MouseEvent) => void);
-  };
-}, [handleClickOutside]); // Zależny od handleClickOutside, które zmienia się, gdy isCardPanelOpen się zmieni
+  // 2. STABILNY HANDLER DLA KLIKNIĘCIA POZA PANELEM
+  const handleClickOutside = useCallback((event: MouseEvent | globalThis.MouseEvent) => {
+    const targetNode = event.target as Node;
+    // Ponieważ isCardPanelOpen jest stanem, musimy go uwzględnić w zależnościach useCallback, 
+    // aby mieć jego najnowszą wartość, ale i tak zyskujemy na stabilności
+    if (isCardPanelOpen && cardPanelRef.current && !cardPanelRef.current.contains(targetNode)) {
+      closeCardPanel();
+    }
+  }, [isCardPanelOpen, cardPanelRef, closeCardPanel]);
+
+
+  // 3. EFFECT HOOK DLA KLAWISZY (dodawany tylko, gdy zmieni się funkcja handleKeyDown)
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleKeyDown]);
+
+
+  // 4. EFFECT HOOK DLA MYSZY (dodawany tylko, gdy zmieni się funkcja handleClickOutside)
+  useEffect(() => {
+    // Używamy globalThis.MouseEvent, aby uniknąć problemów z typowaniem dla document.addEventListener
+    document.addEventListener("mousedown", handleClickOutside as (event: globalThis.MouseEvent) => void);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside as (event: globalThis.MouseEvent) => void);
+    };
+  }, [handleClickOutside]); // Zależny od handleClickOutside
 
 
   // --- OBSŁUGA ZAZNACZANIA MYSZKĄ ---
@@ -328,7 +331,9 @@ useEffect(() => {
       const selectionRectInField = new DOMRect(x1, y1, width, height);
 
       const cardElements = document.querySelectorAll('.card-on-field');
-      const cardsInSelection: CardType[] = [];
+      
+      // ✅ POPRAWKA: Zmieniamy typ na string[]
+      const cardIdsInSelection: string[] = [];
 
       cardElements.forEach(cardEl => {
         const htmlCardEl = cardEl as HTMLElement;
@@ -342,18 +347,16 @@ useEffect(() => {
           selectionRectInField.top < cardRectInField.bottom &&
           selectionRectInField.bottom > cardRectInField.top
         ) {
-          // WAŻNE: W selectedCards chcemy przechowywać CardType, nie ID CardOnField
+          // ✅ POPRAWKA: Pobieramy atrybut data-card-id (string)
           const cardId = htmlCardEl.getAttribute('data-card-id');
-          const foundCard = viewedPlayer?.battlefield.find(c => c.id === cardId)?.card;
-          if (foundCard) {
-            // Upewniamy się, że nie duplikujemy CardType w tablicy
-            if (!cardsInSelection.some(c => c.id === foundCard.id)) {
-               cardsInSelection.push(foundCard);
-            }
+          if (cardId) {
+            // I pchamy go bezpośrednio do tablicy stringów
+            cardIdsInSelection.push(cardId);
           }
         }
       });
-      setSelectedCards(cardsInSelection);
+      // ✅ POPRAWKA: Przekazujemy string[] do stanu
+      setSelectedCards(cardIdsInSelection);
     }
   };
 
@@ -363,134 +366,182 @@ useEffect(() => {
     setSelectionRect(null);
   };
 
-  // --- OBSŁUGA DRAG & DROP ---
-function findCardZoneInPlayer(player: Player | undefined, cardId: string): Zone | null {
-  if (!player || !cardId) return null;
-  if (player.hand.some(c => c.id === cardId)) return "hand";
-  if (player.library.some(c => c.id === cardId)) return "library";
-  if (player.graveyard.some(c => c.id === cardId)) return "graveyard";
-  if (player.exile.some(c => c.id === cardId)) return "exile";
-  if (player.sideboard.some(c => c.id === cardId)) return "sideboard";
-  if (player.commanderZone.some(c => c.id === cardId)) return "commanderZone";
-  if (player.battlefield.some(f => f.id === cardId)) return "battlefield";
-  if (player.battlefield.some(f => f.card.id === cardId)) return "battlefield";
-  return null;
-}
 
-const handleDrop = (e: DragEvent<HTMLDivElement>) => {
-  e.preventDefault();
-  // 🛑 POPRAWKA: Blokada, gdy trwa ruch
-  if (isMoving) return; 
 
-  if (!battlefieldRef.current || !player) return;
 
-  const dropZoneRect = battlefieldRef.current.getBoundingClientRect();
-  const isToken = e.dataTransfer.getData("isToken");
 
-  // ----------------------------------------------------
-  // 1. OBSŁUGA UPUSZCZENIA TOKENU Z TokenViewer
-  // ----------------------------------------------------
-  if (isToken === "true") {
-    const tokenDataString = e.dataTransfer.getData("tokenData");
-    if (tokenDataString) {
-      try {
-        const tokenData: TokenData = JSON.parse(tokenDataString);
-        onCreateToken(tokenData); // Tworzenie tokena to inna, szybka operacja
-        return;
-      } catch (error) {
-        console.error("❌ Błąd parsowania danych tokenu:", error);
-        return;
+
+
+
+
+
+
+
+
+// --- OBSŁUGA DRAG & DROP ---
+
+  // ✅ CAŁA TA FUNKCJA (wraz z wewnętrzną 'findCardZoneInPlayer') ZOSTAŁA ZASTĄPIONA
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    // 🛑 POPRAWKA: Blokada, gdy trwa ruch
+    if (isMoving) return; 
+
+    if (!battlefieldRef.current || !player) return;
+
+    // --- 💡 LOGIKA PRZYCIĄGANIA DO SIATKI (GRID) START 💡 ---
+    // Ustaw rozmiar siatki (w pikselach). 15px to dobry, subtelny rozmiar.
+    const GRID_SIZE = 20.2; 
+    
+    // Funkcja pomocnicza, która zaokrągla współrzędne do najbliższego punktu siatki
+    const snapToGrid = (coord: number) => {
+      return Math.round(coord / GRID_SIZE) * GRID_SIZE;
+    };
+    // --- 💡 LOGIKA PRZYCIĄGANIA DO SIATKI (GRID) KONIEC 💡 ---
+
+    const dropZoneRect = battlefieldRef.current.getBoundingClientRect();
+    const isToken = e.dataTransfer.getData("isToken");
+
+    // ----------------------------------------------------
+    // 1. OBSŁUGA UPUSZCZENIA TOKENU Z TokenViewer
+    // ----------------------------------------------------
+    if (isToken === "true") {
+      const tokenDataString = e.dataTransfer.getData("tokenData");
+      if (tokenDataString) {
+        try {
+          const tokenData: TokenData = JSON.parse(tokenDataString);
+          // 💡 Tokeny również powinny być przyciągane do siatki
+          //const tokenX = e.clientX - dropZoneRect.left - (dragOffset.x || 0);
+          //const tokenY = e.clientY - dropZoneRect.top - (dragOffset.y || 0);
+
+          // Wysyłamy żądanie onCreateToken, ale serwer będzie musiał
+          // obsłużyć pozycjonowanie. LUB, jeśli serwer nie obsługuje x/y dla tokenów:
+          // Musielibyśmy wysłać event moveCard dla nowo utworzonego tokena.
+          // Na razie zakładamy, że serwer umieszcza go w domyślnym miejscu.
+          onCreateToken(tokenData); // TODO: Rozważ dodanie x/y do logiki tworzenia tokenów
+          return;
+        } catch (error) {
+          console.error("❌ Błąd parsowania danych tokenu:", error);
+          return;
+        }
       }
     }
-  }
 
-  // ----------------------------------------------------
-  // 2. WSPÓLNE USTAWIENIA DLA POZYCJI I SKALOWANIA
-  // ----------------------------------------------------
-  const baseCardWidth = 150;
-  const baseCardHeight = 210;
-  const scaledCardWidth = baseCardWidth * (zoom / 140);
-  const scaledCardHeight = baseCardHeight * (zoom / 140);
-  const targetPlayerId = viewedPlayer?.id || player.id;
-  if (!targetPlayerId) return;
+    // ----------------------------------------------------
+    // 2. WSPÓLNE USTAWIENIA DLA POZYCJI I SKALOWANIA
+    // ----------------------------------------------------
+    const baseCardWidth = 100;
+    const baseCardHeight = 139.34;
+    const scaledCardWidth = baseCardWidth * (zoom / 100);
+    const scaledCardHeight = baseCardHeight * (zoom / 100);
+    const targetPlayerId = viewedPlayer?.id || player.id;
+    if (!targetPlayerId) return;
 
-  const baseX = e.clientX - dropZoneRect.left - dragOffset.x;
-  const baseY = e.clientY - dropZoneRect.top - dragOffset.y;
+    // Surowe współrzędne myszy
+    const baseX = e.clientX - dropZoneRect.left - dragOffset.x;
+    const baseY = e.clientY - dropZoneRect.top - dragOffset.y;
 
-  const clamp = (val: number, min: number, max: number) =>
-    Math.max(min, Math.min(max, val));
+    const clamp = (val: number, min: number, max: number) =>
+      Math.max(min, Math.min(max, val));
 
-  const clamped = (x: number, y: number) => ({
-    x: clamp(x, 0, dropZoneRect.width - scaledCardWidth),
-    y: clamp(y, 0, dropZoneRect.height - scaledCardHeight),
-  });
-
-  // ----------------------------------------------------
-  // 3. OBSŁUGA GRUPOWEGO PRZENOSZENIA KART
-  // ----------------------------------------------------
-  const isGroupDrag = e.dataTransfer.types.includes("text/json");
-  if (isGroupDrag) {
-    const draggedCardsData = JSON.parse(
-      e.dataTransfer.getData("text/json")
-    ) as { cardId: string; x?: number; y?: number }[];
-
-    const fromRaw = e.dataTransfer.getData("from") as Zone | undefined;
-    const baseFrom = fromRaw || "hand";
-
-    draggedCardsData.forEach((cardData, index) => {
-      const localZone = findCardZoneInPlayer(player, cardData.cardId);
-      const safeFrom: Zone = localZone || baseFrom;
-
-      if (process.env.NODE_ENV === "development" && !localZone) {
-        console.warn("⚠️ BattlefieldDrop: Nie znaleziono lokalnie strefy źródłowej dla", cardData.cardId, "używam fallback:", safeFrom);
-      }
-
-      const offset = clamped(baseX + index * 20, baseY + index * 20);
-      moveCard(sessionCode, targetPlayerId, safeFrom, "battlefield", cardData.cardId, offset.x, offset.y);
+    // Funkcja clamp pozostaje bez zmian
+    const clamped = (x: number, y: number) => ({
+      x: clamp(x, 0, dropZoneRect.width - scaledCardWidth),
+      y: clamp(y, 0, dropZoneRect.height - scaledCardHeight),
     });
 
-    setSelectedCards([]);
-    setDraggedCards([]);
-    setIsDraggingGroup(false);
-    return;
-  }
-
-  // ----------------------------------------------------
-  // 4. POJEDYNCZE PRZENOSZENIE KARTY
-  // ----------------------------------------------------
-  const cardId = e.dataTransfer.getData("cardId");
-  if (!cardId) {
-    console.warn("⚠️ handleDrop: Brak cardId, pomijam drop event");
-    return;
-  }
-
-  const fromRaw = e.dataTransfer.getData("from") as Zone | undefined;
-  const detected = findCardZoneInPlayer(player, cardId);
-  const safeFrom: Zone = detected || fromRaw || "hand";
-
-  if (process.env.NODE_ENV === "development") {
-    if (!detected) console.warn("⚠️ BattlefieldDrop: Nie znaleziono strefy źródłowej lokalnie dla", cardId);
-    if (fromRaw && detected && fromRaw !== detected) {
-      console.warn("🚨 BattlefieldDrop: Rozbieżność między fromRaw i detected", {
-        cardId,
-        fromRaw,
-        detected,
-      });
+    // Funkcja findCardZoneInPlayer pozostaje bez zmian
+    function findCardZoneInPlayer(player: Player | undefined, cardInstanceId: string): Zone | null {
+      if (!player || !cardInstanceId) return null;
+      if (player.hand.some(c => c.id === cardInstanceId)) return "hand";
+      if (player.library.some(c => c.id === cardInstanceId)) return "library";
+      if (player.graveyard.some(c => c.id === cardInstanceId)) return "graveyard";
+      if (player.exile.some(c => c.id === cardInstanceId)) return "exile";
+      if (player.sideboard.some(c => c.id === cardInstanceId)) return "sideboard";
+      if (player.commanderZone.some(c => c.id === cardInstanceId)) return "commanderZone";
+      if (player.battlefield.some(f => f.id === cardInstanceId)) return "battlefield";
+      return null;
     }
-  }
 
-  const { x: finalX, y: finalY } = clamped(baseX, baseY);
+    // ----------------------------------------------------
+    // 3. OBSŁUGA GRUPOWEGO PRZENOSZENIA KART
+    // ----------------------------------------------------
+    const isGroupDrag = e.dataTransfer.types.includes("text/json");
+    if (isGroupDrag) {
+      const draggedCardsData = JSON.parse(
+        e.dataTransfer.getData("text/json")
+      ) as { cardId: string; x?: number; y?: number }[];
 
-  // Jeśli przenosisz w obrębie battlefield — pozycjonowanie
-  if (safeFrom === "battlefield") {
-    moveCard(sessionCode, targetPlayerId, "battlefield", "battlefield", cardId, finalX, finalY);
-  } else {
+      const fromRaw = e.dataTransfer.getData("from") as Zone | undefined;
+      const baseFrom = fromRaw || "hand"; 
+
+      draggedCardsData.forEach((cardData, index) => {
+        const safeFrom: Zone = baseFrom;
+        // ... (logika ostrzeżeń)
+
+        // 💡 ZASTOSOWANIE SIATKI DO GRUPY
+        // Obliczamy surową pozycję z offsetem
+        const rawX = baseX + index * 20;
+        const rawY = baseY + index * 20;
+        
+        // Przyciągamy do siatki
+        const snappedX = snapToGrid(rawX);
+        const snappedY = snapToGrid(rawY);
+
+        // Ograniczamy do pola bitwy
+        const offset = clamped(snappedX, snappedY);
+        moveCard(sessionCode, targetPlayerId, safeFrom, "battlefield", cardData.cardId, offset.x, offset.y);
+      });
+
+      setSelectedCards([]);
+      setDraggedCards([]);
+      setIsDraggingGroup(false);
+      return;
+    }
+
+    // ----------------------------------------------------
+    // 4. POJEDYNCZE PRZENOSZENIE KARTY
+    // ----------------------------------------------------
+    const cardId = e.dataTransfer.getData("cardId");
+    if (!cardId) {
+      console.warn("⚠️ handleDrop: Brak cardId, pomijam drop event");
+      return;
+    }
+
+    const fromRaw = e.dataTransfer.getData("from") as Zone | undefined;
+    let safeFrom: Zone;
+    if (fromRaw) {
+      safeFrom = fromRaw;
+    } else {
+      const detected = findCardZoneInPlayer(player, cardId);
+      safeFrom = detected || "hand"; 
+      if (process.env.NODE_ENV === "development") {
+         console.warn(`⚠️ BattlefieldDrop (Single): Brak 'from' w dataTransfer. Użyto lokalnej detekcji: ${safeFrom}`);
+      }
+    }
+
+    // 💡 ZASTOSOWANIE SIATKI DO POJEDYNCZEJ KARTY
+    // Najpierw przyciągamy surowe koordynaty
+    const snappedX = snapToGrid(baseX);
+    const snappedY = snapToGrid(baseY);
+    
+    // Następnie ograniczamy przyciągnięte koordynaty do pola bitwy
+    const { x: finalX, y: finalY } = clamped(snappedX, snappedY);
+
+    // Logika ruchu pozostaje bez zmian
     moveCard(sessionCode, targetPlayerId, safeFrom, "battlefield", cardId, finalX, finalY);
-  }
-};
+  };
 
 
-//--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+  //--------------------------------------------------------------------------------------------------------------------------------------------------------------------
   const handleDragStart = (e: DragEvent<HTMLDivElement>, card: CardOnField) => {
     // 🛑 POPRAWKA: Blokada, gdy trwa ruch
     if (isMoving) {
@@ -503,13 +554,15 @@ const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     closeCardPanel();
 
     const rect = e.currentTarget.getBoundingClientRect();
-    // Sprawdzamy, czy KartaOnField ma CardType, które znajduje się w selectedCards
-    const isSelected = selectedCards.some(c => c.id === card.card.id); 
+    
+    // ✅ POPRAWKA: Sprawdzamy, czy unikalne ID TEJ karty (card.id) jest w tablicy selectedCards
+    const isSelected = selectedCards.includes(card.id); 
 
     if (isSelected && selectedCards.length > 1) {
       setIsDraggingGroup(true);
       const draggedCardsWithPos = viewedPlayer?.battlefield
-        .filter(c => selectedCards.some(selectedC => selectedC.id === c.card.id))
+        // ✅ POPRAWKA: Filtrujemy po unikalnym ID instancji
+        .filter(c => selectedCards.includes(c.id))
         .map(c => ({
           cardId: c.id, // CardOnField ID
           x: c.x,
@@ -560,15 +613,15 @@ const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     }
   };
 
- // 🌟 POPRAWIONA FUNKCJA AKCJI DLA KLONOWANIA
-  const handleCloneCardAction = (cardId: string) => {
-  // cardId to ID CardOnField przekazane z panelu
-  if (player && player.id === viewedPlayer?.id) {
-    // Wywołujemy prop cloneCard z poprawnymi argumentami
-    cloneCard(sessionCode, player.id, cardId);
-  }
-  //closeCardPanel(); // Zamykamy panel po sklonowaniu
- };
+  // 🌟 POPRAWIONA FUNKCJA AKCJI DLA KLONOWANIA
+   const handleCloneCardAction = (cardId: string) => {
+    // cardId to ID CardOnField przekazane z panelu
+    if (player && player.id === viewedPlayer?.id) {
+      // Wywołujemy prop cloneCard z poprawnymi argumentami
+      cloneCard(sessionCode, player.id, cardId);
+    }
+    //closeCardPanel(); // Zamykamy panel po sklonowaniu
+  };
 
   if (!viewedPlayer) return null;
 
@@ -596,7 +649,8 @@ const handleDrop = (e: DragEvent<HTMLDivElement>) => {
         {viewedPlayer.battlefield.map((c: CardOnField) => (
           <div
             key={c.id}
-            className={`card-on-field ${getPlayerColorClass(viewedPlayer.id)} ${selectedCards.some(card => card.id === c.card.id) ? 'selected' : ''}`}
+            // ✅ POPRAWKA: Logika 'selected' używa teraz .includes() na tablicy stringów
+            className={`card-on-field ${getPlayerColorClass(viewedPlayer.id)} ${selectedCards.includes(c.id) ? 'selected' : ''}`}
             data-card-id={c.id}
             onMouseEnter={() => {
               setHoveredCardId(c.id); // Ustawiamy ID CardOnField
@@ -613,7 +667,8 @@ const handleDrop = (e: DragEvent<HTMLDivElement>) => {
               cursor: viewedPlayerId === null && !isMoving ? "grab" : "default", // Zmiana kursora
               transform: `scale(${zoom / 100}) rotate(${c.rotation}deg)`,
               transformOrigin: 'center center',
-              zIndex: selectedCards.some(card => card.id === c.card.id) ? 10 : 5
+              // ✅ POPRAWKA: Logika 'zIndex' używa teraz .includes()
+              zIndex: selectedCards.includes(c.id) ? 10 : 5
             }}
             draggable={viewedPlayerId === null && !isMoving} // 🛑 Blokowanie drag&drop
             onDragStart={(e) => handleDragStart(e, c)}
@@ -626,7 +681,6 @@ const handleDrop = (e: DragEvent<HTMLDivElement>) => {
               ownerId={viewedPlayer.id}
               getPlayerColorClass={getPlayerColorClass}
               onCardStatsClick={handleCardStatsClick}
-
               onCardCounterClick={handleCardCounterClick}
               cardOnField={c}
             />

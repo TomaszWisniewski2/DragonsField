@@ -36,8 +36,8 @@ interface BottombarProps {
     from: Zone,
     to: Zone,
     cardId: string,
-    x?: number,         
-    y?: number,         
+    x?: number,       
+    y?: number,       
     position?: number, 
     toBottom?: boolean 
   ) => void;
@@ -262,102 +262,83 @@ export default function Bottombar({
   if (!player || !session) return null;
 
 
-function findCardZoneInPlayer(player: Player | undefined, cardId: string): Zone | null {
-  if (!player || !cardId) return null;
-  if (player.hand.some(c => c.id === cardId)) return "hand";
-  if (player.library.some(c => c.id === cardId)) return "library";
-  if (player.graveyard.some(c => c.id === cardId)) return "graveyard";
-  if (player.exile.some(c => c.id === cardId)) return "exile";
-  if (player.sideboard.some(c => c.id === cardId)) return "sideboard";
-  if (player.commanderZone.some(c => c.id === cardId)) return "commanderZone";
-  if (player.battlefield.some(f => f.id === cardId)) return "battlefield";
-  if (player.battlefield.some(f => f.card.id === cardId)) return "battlefield";
-  return null;
-}
+  // ✅ CAŁA FUNKCJA handleDrop ZOSTAŁA ZASTĄPIONA POPRAWNĄ LOGIKĄ
+  const handleDrop = (e: DragEvent<HTMLDivElement>, toZone: Zone) => {
+    e.preventDefault();
 
-// NOWA, BEZPIECZNA wersja handleDrop
-const handleDrop = (e: DragEvent<HTMLDivElement>, toZone: Zone) => {
-  e.preventDefault();
+    if (isMoving) { // 🛑 BLOKUJEMY DROP, JEŚLI KARTA SIĘ PRZEMIESZCZA
+      return;
+    }
+    
+    const isGroupDrag = e.dataTransfer.types.includes("text/json");
 
-  if (isMoving) { // 🛑 BLOKUJEMY DROP, JEŚLI KARTA SIĘ PRZEMIESZCZA
-    return;
-  }
-  
-  const isGroupDrag = e.dataTransfer.types.includes("text/json");
+    // ✅ Funkcja pomocnicza (identyczna jak w Battlefield.tsx)
+    function findCardZoneInPlayer(player: Player | undefined, cardInstanceId: string): Zone | null {
+      if (!player || !cardInstanceId) return null;
+      if (player.hand.some(c => c.id === cardInstanceId)) return "hand";
+      if (player.library.some(c => c.id === cardInstanceId)) return "library";
+      if (player.graveyard.some(c => c.id === cardInstanceId)) return "graveyard";
+      if (player.exile.some(c => c.id === cardInstanceId)) return "exile";
+      if (player.sideboard.some(c => c.id === cardInstanceId)) return "sideboard";
+      if (player.commanderZone.some(c => c.id === cardInstanceId)) return "commanderZone";
+      if (player.battlefield.some(f => f.id === cardInstanceId)) return "battlefield";
+      return null;
+    }
 
-  if (process.env.NODE_ENV === "development") {
-    console.log("📥 handleDrop ->", { toZone, isGroupDrag });
-  }
+    if (isGroupDrag) {
+      // --- OBSŁUGA GRUPOWA ---
+      const draggedCardsData = JSON.parse(
+        e.dataTransfer.getData("text/json")
+      ) as { cardId: string; from?: Zone }[]; // 'from' jest opcjonalne w typie
 
-  if (isGroupDrag) {
-    const draggedCardsData = JSON.parse(
-      e.dataTransfer.getData("text/json")
-    ) as { cardId: string; from?: Zone }[];
+      // ✅ POPRAWKA: Pobieramy 'from' z głównego dataTransfer (tak jak robi to Battlefield)
+      const fromRaw = e.dataTransfer.getData("from") as Zone | undefined;
 
-    draggedCardsData.forEach((cardData) => {
-      const detected = findCardZoneInPlayer(player, cardData.cardId);
-      const safeFrom: Zone = detected || cardData.from || "hand";
+      draggedCardsData.forEach((cardData) => {
+        // ✅ POPRAWKA LOGIKI 'FROM': Priorytet ma 'fromRaw'.
+        const detected = findCardZoneInPlayer(player, cardData.cardId);
+        const safeFrom: Zone = fromRaw || detected || "hand"; // Priorytet: fromRaw > detected > hand
 
-      // 🛡️ OCHRONA przed duplikatem (z tej samej strefy)
+        // 🛡️ OCHRONA
+        if (safeFrom === toZone) {
+          console.warn("⛔ moveCard (group) z tej samej strefy pominięty:", { cardId: cardData.cardId, from: safeFrom, to: toZone });
+          return;
+        }
+
+        moveCard(session.code, player.id, safeFrom, toZone, cardData.cardId);
+      });
+
+      clearSelectedCards();
+    } else {
+      // --- OBSŁUGA POJEDYNCZA ---
+      const cardId = e.dataTransfer.getData("cardId");
+      const fromRaw = e.dataTransfer.getData("from") as Zone | undefined;
+
+      if (!cardId) {
+        console.warn("⚠️ handleDrop bez cardId – pomijam event");
+        return;
+      }
+
+      // ✅ POPRAWKA LOGIKI 'FROM': Priorytet dla 'fromRaw'
+      const detected = findCardZoneInPlayer(player, cardId);
+      const safeFrom: Zone = fromRaw || detected || "hand"; // Priorytet: fromRaw > detected > hand
+
+      // 🛡️ OCHRONA
       if (safeFrom === toZone) {
-        console.warn("⛔ moveCard z tej samej strefy pominięty:", {
-          cardId: cardData.cardId,
-          from: safeFrom,
-          to: toZone,
-        });
+        console.warn("⛔ moveCard (single) z tej samej strefy pominięty:", { cardId, from: safeFrom, to: toZone });
         return;
       }
 
       if (process.env.NODE_ENV === "development") {
-        if (!detected) console.warn("⚠️ Nie znaleziono strefy lokalnie dla", cardData.cardId);
-        if (cardData.from && cardData.from !== detected) {
-          console.warn("🚨 Rozbieżność from (dataTransfer vs local)", {
-            cardId: cardData.cardId,
-            dataFrom: cardData.from,
-            detected,
-          });
-        }
+        if (!fromRaw && !detected) console.warn("⚠️ Nie wykryto 'from' ani lokalnie. Użyto fallback 'hand'", { cardId, toZone });
       }
 
-      moveCard(session.code, player.id, safeFrom, toZone, cardData.cardId);
-    });
-
-    clearSelectedCards();
-  } else {
-    const cardId = e.dataTransfer.getData("cardId");
-    const fromRaw = e.dataTransfer.getData("from") as Zone | undefined;
-
-    if (!cardId) {
-      console.warn("⚠️ handleDrop bez cardId – pomijam event");
-      return;
+      moveCard(session.code, player.id, safeFrom, toZone, cardId);
     }
-
-    const detected = findCardZoneInPlayer(player, cardId);
-    const safeFrom: Zone = detected || fromRaw || "hand";
-
-    // 🛡️ OCHRONA przed duplikatem
-    if (safeFrom === toZone) {
-      console.warn("⛔ moveCard z tej samej strefy pominięty:", {
-        cardId,
-        from: safeFrom,
-        to: toZone,
-      });
-      return;
-    }
-
-    if (process.env.NODE_ENV === "development") {
-      if (!detected) console.warn("⚠️ Nie wykryto lokalnie strefy karty:", { cardId, fromRaw, toZone });
-      if (fromRaw && detected && fromRaw !== detected) {
-        console.warn("🚨 Rozbieżność between fromRaw and detected:", { cardId, fromRaw, detected });
-      }
-    }
-
-    moveCard(session.code, player.id, safeFrom, toZone, cardId);
-  }
-};
+  };
 
 
-//--------------------------------------------------------------
+  //--------------------------------------------------------------
   // Funkcje do CardPanel, zostają w Bottombar, bo używają sessionCode, player.id i moveCard
   const handleMoveToGraveyardAction = (cardId: string) => {
     if (isMoving) return; // 🛑 BLOKADA
@@ -383,21 +364,21 @@ const handleDrop = (e: DragEvent<HTMLDivElement>, toZone: Zone) => {
   
   const handleMovetoBottomofLibrary = (cardId: string) => {
     if (isMoving) return; // 🛑 BLOKADA
-  if (player && player.id === viewedPlayer?.id) {
-   // Dół biblioteki (toBottom: true)
-   moveCard(sessionCode, player.id, "hand", "library", cardId, undefined, undefined, undefined, true); 
-  }
- };
+    if (player && player.id === viewedPlayer?.id) {
+      // Dół biblioteki (toBottom: true)
+      moveCard(sessionCode, player.id, "hand", "library", cardId, undefined, undefined, undefined, true); 
+    }
+  };
 
 
- const handleMoveToBattlefieldFlippedAction = (cardId: string) => {
+  const handleMoveToBattlefieldFlippedAction = (cardId: string) => {
     if (isMoving) return; // 🛑 BLOKADA
     if (player && player.id === viewedPlayer?.id) {
         // Zakładamy, że karta w panelu kontekstowym pochodzi z "hand"
         const fromZone: Zone = "hand";
         moveCardToBattlefieldFlipped(sessionCode, player.id, cardId, fromZone);
     }
-};
+  };
   // ------------------------------------------------------------------------------
 
   return (
@@ -405,82 +386,107 @@ const handleDrop = (e: DragEvent<HTMLDivElement>, toZone: Zone) => {
       <div className={`bottom-bar ${getPlayerColorClass(player.id)}`} ref={bottomBarRef}>
 
         {/* Obszar RĘKI (Hand) - zostaje w Bottombar, bo jest szerszy i ma unikalny układ */}
-        <div
+       
+       
+       
+       
+       
+<div
           className="hand fixed-hand-width"
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => handleDrop(e, "hand")}
         >
+          {/* ✅ ZMIANA: Usunięto styl inline (style={{ color: "#fff", cursor: 'pointer' }}) 
+            i zastąpiono go className="zone-label".
+            Zachowano style={{ cursor: 'pointer' }}, ponieważ sama klasa .zone-label go nie nadaje.
+            Zmieniono także typ 'HTMLDivElement' na 'HTMLSpanElement' dla spójności.
+          */}
           <span
             id="hand-toggle"
-            onClick={toggleHandPanel as React.MouseEventHandler<HTMLDivElement>}
-            style={{ color: "#fff", cursor: 'pointer' }}>
+            className="zone-label"
+            onClick={toggleHandPanel as React.MouseEventHandler<HTMLSpanElement>}
+            style={{ cursor: 'pointer' }}>
             Hand ({player?.hand.length ?? 0})
             {isHandPanelOpen ? ' ▲' : ' ▼'}
           </span>
-          <div className="hand-cards">
-            {player?.hand.map((c) => (
-              <div
-                key={c.id}
-                draggable={!isMoving} // 🛑 BLOKUJEMY PRZECIĄGANIE
-                onDragStart={(e) => {
-    e.stopPropagation();
-    const rect = e.currentTarget.getBoundingClientRect();
-    setDragOffset({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    });
-
-    // Używamy ID instancji karty, jeśli jest dostępne (c.id jest zakładane jako unikalne)
-    e.dataTransfer.setData("cardId", c.id);
-    e.dataTransfer.setData("from", "hand");
-}}
-
-
-                onMouseEnter={() => handleCardHover(c)}
-                onMouseLeave={() => handleCardHover(null)}
-                onContextMenu={(e) => handleCardContextMenu(e, c)}
-              >
-                <Card
-                  card={c}
-                  from="hand"
-                  ownerId={player.id}
-                  getPlayerColorClass={getPlayerColorClass}
-                  zoom={zoom}
-                />
+          {/* Koniec zmian */}
+          
+<div className="hand-cards">
+            {/* ✅ ZMIANA: Dodajemy renderowanie warunkowe */}
+            {player?.hand.length === 0 ? (
+              // Jeśli ręka jest pusta, pokaż placeholder
+              <div className="hand-empty-placeholder">
+                Hand
               </div>
-            ))}
+            ) : (
+              // W przeciwnym razie, mapuj karty
+              player.hand.map((c) => (
+                <div
+                  key={c.id}
+                  style={{ position: 'relative' }}
+                  draggable={!isMoving} 
+                  onDragStart={(e) => {
+                    e.stopPropagation();
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setDragOffset({
+                      x: e.clientX - rect.left,
+                      y: e.clientY - rect.top,
+                    });
+                    e.dataTransfer.setData("cardId", c.id);
+                    e.dataTransfer.setData("from", "hand");
+                  }}
+                  onMouseEnter={() => handleCardHover(c)}
+                  onMouseLeave={() => handleCardHover(null)}
+                  onContextMenu={(e) => handleCardContextMenu(e, c)}
+                >
+                  <Card
+                    card={c}
+                    from="hand"
+                    ownerId={player.id}
+                    getPlayerColorClass={getPlayerColorClass}
+                    zoom={zoom}
+                  />
+                </div>
+              ))
+            )}
           </div>
+
+
+
         </div>
 
-{/* WYDZIELONE ZONY (Zones) - PO ZMIANACH */}
-      <Zones
-        player={player}
-        session={session}
-        getPlayerColorClass={getPlayerColorClass}
-        setDragOffset={setDragOffset}
-        handleDrop={handleDrop}
-        handleCardHover={handleCardHover}
-        zoom={zoom}
-        
-        isLibraryPanelOpen={isLibraryPanelOpen}
-        isGraveyardPanelOpen={isGraveyardPanelOpen}
-        isExilePanelOpen={isExilePanelOpen}
-        isLibraryTopRevealed={isLibraryTopRevealed}
-        
-        toggleLibraryPanel={toggleLibraryPanel}
-        toggleGraveyardPanel={toggleGraveyardPanel}
-        toggleExilePanel={toggleExilePanel}
+        {/* Strefy (Library, Graveyard, Exile, Commander) 
+          są teraz w komponencie <Zones /> i nie wymagają zmian 
+        */}
+        <Zones
+          player={player}
+          session={session}
+          getPlayerColorClass={getPlayerColorClass}
+          setDragOffset={setDragOffset}
+          handleDrop={handleDrop}
+          handleCardHover={handleCardHover}
+          zoom={zoom}
+          
+          isLibraryPanelOpen={isLibraryPanelOpen}
+          isGraveyardPanelOpen={isGraveyardPanelOpen}
+          isExilePanelOpen={isExilePanelOpen}
+          isLibraryTopRevealed={isLibraryTopRevealed}
+          
+          toggleLibraryPanel={toggleLibraryPanel}
+          toggleGraveyardPanel={toggleGraveyardPanel}
+          toggleExilePanel={toggleExilePanel}
 
-        isMoving={isMoving} // 🛑 PRZEKAZUJEMY isMoving DO ZONES
-      />
-      {/* KONIEC WYDZIELONYCH ZON */}
+          isMoving={isMoving} // 🛑 PRZEKAZUJEMY isMoving DO ZONES
+        />
+        {/* KONIEC WYDZIELONYCH ZON */}
         
       </div>
 
+
+
+
+
       {/* RENDEROWANIE PANELI */}
-// ... panele nie wymagają blokowania, bo ich akcje (np. sortowanie)
-// nie są blokowane przez isMoving, a akcje ruchu są blokowane na poziomie funkcji.
-// ...
 
       {isHandPanelOpen && (
         <HandPanel

@@ -1,4 +1,4 @@
-// src/pages/PlaytestComponents/ExileViewer.tsx (ZMODYFIKOWANY)
+// src/pages/PlaytestComponents/ExileViewer.tsx
 
 import { useState, useRef } from "react";
 import type { Player } from "../../components/types";
@@ -22,11 +22,17 @@ export default function ExileViewer({ player, toggleExileViewer, playerColorClas
  
  const canDrag = isOwned; // Tylko właściciel może przeciągać z Exile
 
+ // ✅ NOWA LOGIKA: Filtrowanie kart
+ const filteredCards = player.exile.filter(card =>
+  card.name.toLowerCase().includes(filterText.toLowerCase())
+ );
+
  return (
   <div className={`library-viewer-overlay ${playerColorClass}`}>
    <div className="library-viewer-container">
     <div className="library-viewer-header">
-     <span>Viewing Exile ({player.exile.length})</span>
+     {/* ✅ ZMIANA: Używamy filteredCards.length */}
+     <span>Viewing Exile ({filteredCards.length} of {player.exile.length})</span>
      <button onClick={toggleExileViewer}>Close</button>
     </div>
     <div className="library-viewer-content">
@@ -35,7 +41,8 @@ export default function ExileViewer({ player, toggleExileViewer, playerColorClas
      </div>
 
      <ul className="card-list">
-      {player.exile.map((card) => (
+      {/* ✅ ZMIANA: Mapujemy po filteredCards */}
+      {filteredCards.map((card) => (
        <li
         key={card.id}
         draggable={canDrag} // Przeciąganie tylko jeśli jesteś właścicielem
