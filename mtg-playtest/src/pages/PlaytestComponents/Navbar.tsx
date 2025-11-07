@@ -65,60 +65,61 @@ export default function Navbar({
  }, []);
 
 
- // === useEffect do obsługi skrótów klawiszowych (1, 2, 3, 4) ===
-useEffect(() => {
-  const handleKeyDown = (event: KeyboardEvent) => {
-    // Sprawdź, czy klawisz to jeden z F1 do F6
-    if (event.key === 'F1' || event.key === 'F2' || event.key === 'F3' || event.key === 'F4' || event.key === 'F5' || event.key === 'F6') {
-      let playerIndex: number;
+ // === useEffect do obsługi skrótów klawiszowych (F1-F6) ===
+ // (Blok zakomentowany przez użytkownika, ale zawiera poprawki błędów)
+//  useEffect(() => {
+//    const handleKeyDown = (event: KeyboardEvent) => {
+//      // Sprawdź, czy klawisz to jeden z F1 do F6
+//      if (event.key === 'F1' || event.key === 'F2' || event.key === 'F3' || event.key === 'F4' || event.key === 'F5' || event.key === 'F6') {
+//        let playerIndex: number;
 
-      // Wyznacz indeks gracza na podstawie wciśniętego klawisza Fx
-      switch (event.key) {
-        case 'F1':
-          playerIndex = 0; // Klawisz 'F1' odpowiada indeksowi 0 (gracz 1)
-          break;
-        case 'F2':
-          playerIndex = 1; // Klawisz 'F2' odpowiada indeksowi 1 (gracz 2)
-          break;
-        case 'F3':
-          playerIndex = 2; // Klawisz 'F3' odpowiada indeksowi 2 (gracz 3)
-          break;
-        case 'F4':
-          playerIndex = 3; // Klawisz 'F4' odpowiada indeksowi 3 (gracz 4)
-          break; // <-- TUTAJ BYŁ BŁĄD: Brakowało break;
-        case 'F5':
-          playerIndex = 4; // Klawisz 'F5' odpowiada indeksowi 4 (gracz 5)
-          break; // <-- TUTAJ BYŁ BŁĄD: Brakowało break;
-        case 'F6':
-          playerIndex = 5; // Klawisz 'F6' odpowiada indeksowi 5 (gracz 6)
-          break;
-        default:
-          return; // Powinno być nieosiągalne, ale dla bezpieczeństwa
-      }
-    
-      // Upewnij się, że index jest prawidłowy i gracz istnieje w sesji
-      if (session.players[playerIndex]) {
-        const targetPlayer = session.players[playerIndex];
-        
-        // Jeśli to lokalny gracz, ignorujemy (zgodnie z logiką RMB)
-        if (targetPlayer.id === player?.id) {
-          return; 
-        }
+//        // Wyznacz indeks gracza na podstawie wciśniętego klawisza Fx
+//        switch (event.key) {
+//          case 'F1':
+//            playerIndex = 0; // Klawisz 'F1' odpowiada indeksowi 0 (gracz 1)
+//            break;
+//          case 'F2':
+//            playerIndex = 1; // Klawisz 'F2' odpowiada indeksowi 1 (gracz 2)
+//            break;
+//          case 'F3':
+//            playerIndex = 2; // Klawisz 'F3' odpowiada indeksowi 2 (gracz 3)
+//            break;
+//          case 'F4':
+//            playerIndex = 3; // Klawisz 'F4' odpowiada indeksowi 3 (gracz 4)
+//            break; // <-- ✅ POPRAWKA: Dodano brakujący break
+//          case 'F5':
+//            playerIndex = 4; // Klawisz 'F5' odpowiada indeksowi 4 (gracz 5)
+//            break; // <-- ✅ POPRAWKA: Dodano brakujący break
+//          case 'F6':
+//            playerIndex = 5; // Klawisz 'F6' odpowiada indeksowi 5 (gracz 6)
+//            break;
+//          default:
+//            return; // Powinno być nieosiągalne, ale dla bezpieczeństwa
+//        }
+   
+//        // Upewnij się, że index jest prawidłowy i gracz istnieje w sesji
+//        if (session.players[playerIndex]) {
+//          const targetPlayer = session.players[playerIndex];
+   
+//          // Jeśli to lokalny gracz, ignorujemy (zgodnie z logiką RMB)
+//          if (targetPlayer.id === player?.id) {
+//            return; 
+//          }
 
-        event.preventDefault(); 
-        
-        // Przełącz PlayerPanel dla znalezionego gracza
-        togglePlayerPanel(targetPlayer.id);
-      }
-    }
-  };
+//          event.preventDefault(); 
+   
+//          // Przełącz PlayerPanel dla znalezionego gracza
+//          togglePlayerPanel(targetPlayer.id);
+//        }
+//      }
+//    };
 
-  document.addEventListener('keydown', handleKeyDown);
+//    document.addEventListener('keydown', handleKeyDown);
 
-  return () => {
-   document.removeEventListener('keydown', handleKeyDown);
-  };
- }, [session.players, player?.id, togglePlayerPanel]); 
+//    return () => {
+//      document.removeEventListener('keydown', handleKeyDown);
+//    };
+//  }, [session.players, player?.id, togglePlayerPanel]); 
  // =========================================================================
 
  // Zaktualizowany useEffect do obsługi kliknięcia poza panelami
@@ -249,7 +250,7 @@ useEffect(() => {
       className={`nav-text nav-link counters-btn dropdown-triangle ${getPlayerColorClass(player.id)}`}
       onClick={toggleCountersPanel}
      >
-     Counters
+      Counters
      </a>
      {showCounters && (
       <CountersPanel
@@ -272,10 +273,15 @@ useEffect(() => {
      const isLocalPlayer = p.id === player.id; 
      const isPlayerPanelOpen = showPlayerPanelForId === p.id;
 
-     
+     // ✅ NOWA ZMIENNA: Sprawdzamy, czy gracz jest offline
+     // Zakładamy, że 'isOnline' jest domyślnie 'true', jeśli pole nie istnieje
+     const isOffline = p.isOnline === false;
+   
      return (
       <div
        key={p.id}
+       // ✅ NOWOŚĆ: Dodajemy styl 'opacity', jeśli gracz jest offline
+       style={isOffline ? { opacity: 0.5, pointerEvents: 'none' } : {}}
        className={`other-player-info ${viewedPlayerId === p.id ? "active-player-info" : ""} ${isLocalPlayer ? "current-player" : ""} ${getPlayerColorClass(p.id)}`}
        ref={(el) => { playerInfoRefs.current[p.id] = el; }}
       >
@@ -289,24 +295,33 @@ useEffect(() => {
         onContextMenu={(e) => handlePlayerNameContextMenu(e, p.id, isLocalPlayer)}
        >
         {index + 1}: {p.name}: {p.life} HP
+        {/* ✅ NOWOŚĆ: Dodajemy etykietę "(Offline)" */}
+        {isOffline && (
+  <span 
+    style={{ color: '#969595ff', marginLeft: '5px', fontSize: '1.2em', lineHeight: '1' }} 
+    title="Gracz rozłączony (Offline)"
+  >
+    ●
+  </span>
+)}
        </span>
 
-{/* PlayerPanel otwiera się TYLKO dla przeciwników po RMB lub przez skrót klawiszowy */}
-   {isPlayerPanelOpen && !isLocalPlayer && (
-    <PlayerPanel
-    onClose={() => setShowPlayerPanelForId(null)}
-    targetPlayer={p}
-    sessionType={session.sessionType} 
-    openGraveyardViewerForPlayer={openGraveyardViewerForPlayer} 
-    setViewedPlayerId={setViewedPlayerId}
-    playerColorClass={getPlayerColorClass(p.id)}
-    // === PRZEKAZANIE NOWYCH FUNKCJI ===
-    openExileViewerForPlayer={openExileViewerForPlayer}
-    openLibraryViewerForPlayer={openLibraryViewerForPlayer}
-    openCommanderViewerForPlayer={openCommanderViewerForPlayer} 
-    // =================================
-    />
-   )}
+       {/* PlayerPanel otwiera się TYLKO dla przeciwników po RMB lub przez skrót klawiszowy */}
+       {isPlayerPanelOpen && !isLocalPlayer && (
+        <PlayerPanel
+         onClose={() => setShowPlayerPanelForId(null)}
+         targetPlayer={p}
+         sessionType={session.sessionType} 
+         openGraveyardViewerForPlayer={openGraveyardViewerForPlayer} 
+         setViewedPlayerId={setViewedPlayerId}
+         playerColorClass={getPlayerColorClass(p.id)}
+         // === PRZEKAZANIE NOWYCH FUNKCJI ===
+         openExileViewerForPlayer={openExileViewerForPlayer}
+         openLibraryViewerForPlayer={openLibraryViewerForPlayer}
+         openCommanderViewerForPlayer={openCommanderViewerForPlayer} 
+         // =================================
+        />
+       )}
        
        {/* Przyciski Counters/Dropdown dla wszystkich graczy */}
        <div

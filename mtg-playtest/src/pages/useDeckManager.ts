@@ -1,5 +1,5 @@
 // useDeckManager.ts
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 // Importy z DeckManager.tsx
 import { getCardByName, getCardImageUrl, getCardByURI, getCardBySetAndNumber } from "../api/scryfall";
 import type { CardType, TokenData } from "../components/types";
@@ -358,31 +358,31 @@ export function useDeckManager(): DeckManagerHook {
             }
         }
     );
-const [staticTokens] = useState<TokenData[]>(STATIC_TOKENS.map(mapCardToToken));
-
-// Dynamiczne tokeny (dodawane przez karty)
-const [dynamicTokens, setDynamicTokens] = useState<TokenData[]>(() => {
-    try {
-        // Używamy "dynamicTokens" zamiast "tokenList" do przechowywania *tylko* generowanych tokenów
-        const savedDynamic = JSON.parse(localStorage.getItem("dynamicTokens") || "[]");
-        return savedDynamic;
-    } catch {
-        return [];
-    }
-});
-
-// Dla zachowania kompatybilności — łączona lista (dynamiczne + statyczne)
-const tokenList = useMemo(() => {
-    // Upewniamy się, że nie ma duplikatów (nazwy statyczne + dynamiczne)
-    const combined = [...dynamicTokens, ...staticTokens];
-    const uniqueTokens = new Map<string, TokenData>();
-    for (const token of combined) {
-        if (!uniqueTokens.has(token.name)) {
-            uniqueTokens.set(token.name, token);
+    
+    // ✅ ZMIANA (OPCJA A): Używamy jednego stanu "tokenList"
+    const [tokenList, setTokenList] = useState<TokenData[]>(() => {
+        const staticTokenData = STATIC_TOKENS.map(mapCardToToken);
+        let savedList: TokenData[] = [];
+        try {
+            // Wczytujemy z klucza "tokenList" (tak jak oczekuje useSocket)
+            savedList = JSON.parse(localStorage.getItem("tokenList") || "[]");
+        } catch {
+            savedList = []; // Błąd parsowania
         }
-    }
-    return Array.from(uniqueTokens.values());
-}, [dynamicTokens, staticTokens]);
+
+        // Łączymy wczytaną listę ze statycznymi i usuwamy duplikaty
+        // To gwarantuje, że statyczne tokeny są zawsze obecne
+        const combined = [...savedList, ...staticTokenData];
+        const uniqueTokens = new Map<string, TokenData>();
+        for (const token of combined) {
+            if (!uniqueTokens.has(token.name)) {
+                uniqueTokens.set(token.name, token);
+            }
+        }
+        return Array.from(uniqueTokens.values());
+    });
+    
+    // ❌ Stare stany dynamicTokens i useMemo zostały usunięte
 
     const [loading, setLoading] = useState(false);
     const [bulkText, setBulkText] = useState("");
@@ -394,36 +394,43 @@ const tokenList = useMemo(() => {
     /**
      * Funkcja aktualizująca globalną listę tokenów.
      */
-const updateTokenList = useCallback((newTokens: TokenData[] | undefined) => {
-    if (!newTokens || newTokens.length === 0) return;
+    const updateTokenList = useCallback((newTokens: TokenData[] | undefined) => {
+        if (!newTokens || newTokens.length === 0) return;
 
-    setDynamicTokens(prevList => {
-        const currentNames = new Set(prevList.map(t => t.name));
-        // Dodajemy tylko tokeny, których jeszcze nie mamy (po nazwie)
-        const uniqueNewTokens = newTokens.filter(t => !currentNames.has(t.name));
-        return uniqueNewTokens.length > 0 ? [...prevList, ...uniqueNewTokens] : prevList;
-    });
-}, []);
+        // ✅ ZMIANA: Aktualizujemy główny stan "tokenList"
+        setTokenList(prevList => {
+            const currentNames = new Set(prevList.map(t => t.name));
+            // Dodajemy tylko tokeny, których jeszcze nie mamy (po nazwie)
+            const uniqueNewTokens = newTokens.filter(t => !currentNames.has(t.name));
+            return uniqueNewTokens.length > 0 ? [...prevList, ...uniqueNewTokens] : prevList;
+        });
+    }, []);
 
     /**
      * Funkcja do czyszczenia listy dynamicznych tokenów i ponownego skanowania talii.
      */
-const recomputeTokenList = useCallback(() => {
-    const tokenMap = new Map<string, TokenData>();
-    // ZMIANA: Skanujemy tokeny ze wszystkich kart, wliczając commandery
-    const allCards = [...deck, ...sideboard, ...commander];
-
-    // Dodajemy tokeny ze wszystkich kart, w tym commanderów
-    allCards.forEach(card => {
-        card.tokens?.forEach(token => {
-            if (!tokenMap.has(token.name)) {
-                tokenMap.set(token.name, token);
-            }
+    const recomputeTokenList = useCallback(() => {
+        const tokenMap = new Map<string, TokenData>();
+        
+        // 1. ✅ Zawsze zaczynamy od statycznych tokenów jako bazy
+        STATIC_TOKENS.map(mapCardToToken).forEach(token => {
+            tokenMap.set(token.name, token);
         });
-    });
 
-    setDynamicTokens(Array.from(tokenMap.values()));
-}, [deck, sideboard, commander]);
+        // 2. Skanujemy tokeny ze wszystkich kart, wliczając commandery
+        const allCards = [...deck, ...sideboard, ...commander];
+
+        allCards.forEach(card => {
+            card.tokens?.forEach(token => {
+                if (!tokenMap.has(token.name)) {
+                    tokenMap.set(token.name, token);
+                }
+            });
+        });
+
+        // ✅ ZMIANA: Ustawiamy główny stan "tokenList"
+        setTokenList(Array.from(tokenMap.values()));
+    }, [deck, sideboard, commander]);
 
     // ----------------------------------------------------------------------
     // SIDE EFFECTS (useEffect)
@@ -451,9 +458,10 @@ const recomputeTokenList = useCallback(() => {
         recomputeTokenList();
     }, [deck, sideboard, commander, recomputeTokenList]); 
     
+    // ✅ ZMIANA: Zapisujemy całą "tokenList" do localStorage
     useEffect(() => {
-        localStorage.setItem("dynamicTokens", JSON.stringify(dynamicTokens));
-    }, [dynamicTokens]);
+        localStorage.setItem("tokenList", JSON.stringify(tokenList));
+    }, [tokenList]);
     
     // ----------------------------------------------------------------------
     // OBSŁUGA ZDARZEŃ (HANDLERY)
@@ -494,7 +502,7 @@ const recomputeTokenList = useCallback(() => {
     /**
      * Funkcja do usuwania karty z dowolnej listy (Deck lub Sideboard).
      */
-const handleRemoveCard = useCallback((id: string, isSideboard: boolean = false) => {
+    const handleRemoveCard = useCallback((id: string, isSideboard: boolean = false) => {
         if (isSideboard) {
             setSideboard(prevSideboard => prevSideboard.filter((c) => c.id !== id));
         } else {
@@ -555,114 +563,111 @@ const handleRemoveCard = useCallback((id: string, isSideboard: boolean = false) 
     /**
      * Obsługa masowego importu.
      */
+/**
+     * ZMODYFIKOWANA OBSŁUGA MASOWEGO IMPORTU (Z POPRAWKAMI LINTERA)
+     */
     async function handleBulkImport() {
-        // 1. Regex do precyzyjnego pobierania: ILOŚĆ NAZWA (SET) NUMER
+        // 1. Regex precyzyjny (Set + Numer): 1 Sol Ring (CMR) 334
         const preciseCardLineRegex = /^(\d+)\s+(.+?)\s+\(([A-Z0-9]+)\)\s+([A-Z0-9\-\\/]+)$/;
+        
+        // 2. Regex Nazwa + Set: 1 Sol Ring (CMR)
+        // Musi mieć $ na końcu, aby nie łapać linii z numerem
+        const nameAndSetRegex = /^(\d+)\s+(.+?)\s+\(([A-Z0-9]+)\)$/;
 
-        // 2. Poprawiony Regex do fallbacku: ILOŚĆ NAZWA (opcjonalny SET) (opcjonalny NUMER lub inne śmieci, które ignorujemy)
-        // Zauważ, że usunięto grupę dla numeru, aby uniknąć problemów
-        const basicCardLineRegex = /^(\d+)\s+(.+?)(?:\s+\(([A-Z0-9]+)\))?/;
-
-        // 3. NOWY Regex do pobierania tylko po NAZWIE (ignorując set i numer)
+        // 3. Regex podstawowy (łapie wszystko inne): 1 Sol Ring LUB 1 Sol Ring *F*
         const bareNameLineRegex = /^(\d+)\s+(.+)$/;
 
         const lines = bulkText.split("\n").map((l) => l.trim()).filter(Boolean);
         const newDeck: CardType[] = [];
         const newSideboard: CardType[] = [];
         const bulkTokens: TokenData[] = [];
-        // ZMIANA: newCommanders to tablica
         const newCommanders: CardType[] = []; 
         const uniqueTokenNamesInBulk = new Set<string>();
-        // 💡 NOWOŚĆ: Śledzenie, które karty (po Scryfall ID) już zostały dodane jako dowódcy
         const commanderBaseIdsInBulk = new Set<string>();
         let isCommanderAlreadySet = false;
         let isSideboardSection = false;
-//-----------------------------------------------------------------------------------
+
         setLoading(true);
         try {
             for (const line of lines) {
-                // 💡 Sprawdzanie, czy linia oznacza początek sideboardu
                 if (line.toUpperCase() === "SIDEBOARD:") {
                     isSideboardSection = true;
                     continue;
                 }
                 
-                let data: ScryfallCardData | null = null;
                 const countMatch = line.match(/^(\d+)/);
                 if (!countMatch) continue;
-
                 const count = parseInt(countMatch[1], 10);
-                
-                
-                // 1. Próba precyzyjnego pobrania (SET + NUMER)
-const preciseMatch = line.match(preciseCardLineRegex);
-        if (preciseMatch) {
-            const setCode = preciseMatch[3]; 
-            const collectorNumber = preciseMatch[4];
-            try {
-                data = await getCardBySetAndNumber(setCode, collectorNumber);
-            } catch { // Usunięto deklarację 'error'
-                // console.warn(`Nie udało się pobrać karty (SET/NUMER): ${line}. Próba nazwy. Błąd: ${error}`);
-            }
-        }
-                
-                // 2. Fallback do pobierania po NAZWIE + (ewentualnie SET)
-                if (!data) {
-                    const basicMatch = line.match(basicCardLineRegex);
-                    if (basicMatch) {
-                        const baseName = basicMatch[2].trim(); 
-                        const setCode = basicMatch[3]; 
-                        
-                        let scryfallQuery = baseName;
-                        // Usuwamy wszystko, co jest za nawiasem, np. numer kolekcjonerski, *F*
-                        let finalName = baseName.replace(/\s+\(.*?\)/g, ''); // Usuń (SET)
-                        finalName = finalName.replace(/\s+[A-Z0-9\-\\/]+(?=\s|$)/g, '') // Usuń NUMER
-                                              .replace(/\s+\*?[FNG]+\*?$/i, '') // Usuń *F* / *NF*
-                                              .trim();
 
-                        if (setCode) {
-                            scryfallQuery = `${finalName} set:${setCode}`;
-                        } else {
-                            scryfallQuery = finalName;
-                        }
-                        
+                let data: ScryfallCardData | null = null;
+                
+                // --- NOWA, UPROSZCZONA LOGIKA PARSOWANIA ---
+
+                // Krok 1: Próba dopasowania precyzyjnego (Set + Numer)
+                const preciseMatch = line.match(preciseCardLineRegex);
+                if (preciseMatch) {
+                    try {
+                        const setCode = preciseMatch[3];
+                        const collectorNumber = preciseMatch[4];
+                        data = await getCardBySetAndNumber(setCode, collectorNumber);
+                    // ZMIANA: Usunięto nieużywaną zmienną 'e'
+                    } catch { 
+                        console.warn(`[Import] Nie udało się pobrać (Set/Numer): "${line}". Próba fallbacku.`);
+                    }
+                }
+
+                // Krok 2: Próba dopasowania (Nazwa + Set)
+                if (!data) {
+                    const nameSetMatch = line.match(nameAndSetRegex);
+                    if (nameSetMatch) {
                         try {
-                            data = await getCardByName(scryfallQuery);
-                        } catch  {
-                            // console.error(`Nie udało się pobrać karty (Nazwa/SET): ${line}. Błąd: ${error}`);
+                            const name = nameSetMatch[2];
+                            const setCode = nameSetMatch[3];
+                            data = await getCardByName(`!"${name}" set:${setCode}`);
+                        // ZMIANA: Usunięto nieużywaną zmienną 'e'
+                        } catch {
+                            console.warn(`[Import] Nie udało się pobrać (Nazwa/Set): "${line}". Próba fallbacku.`);
                         }
                     }
                 }
 
-                // 3. Najprostszy Fallback: Wyszukiwanie tylko po samej nazwie karty
-if (!data) {
-    const bareMatch = line.match(bareNameLineRegex);
-    if (bareMatch) {
-        let namePart = bareMatch[2].trim(); 
+                // Krok 3: Ostateczny fallback (Tylko Nazwa - oczyszczona)
+                if (!data) {
+                    const bareMatch = line.match(bareNameLineRegex);
+                    if (bareMatch) {
+                        let namePart = bareMatch[2].trim();
 
-        // Usuwamy wszystkie niepożądane znaczniki, które Scryfall może zinterpretować źle.
-        namePart = namePart.replace(/\s+\(.*?\)/g, '') // Usuń (SET)
-                         .replace(/\s+[A-Z0-9\-\\/]+(?=\s|$)/g, '') // Usuń NUMER
-                         .replace(/\s+\*?[FNG]+\*?$/i, '') // Usuń *F* / *NF*
-                         .trim();
-        
-        if (namePart) {
-            try {
-                data = await getCardByName(namePart); 
-            } catch (error) {
-                console.error(`Nie udało się pobrać karty (Tylko Nazwa - oczyszczona): ${line}. Błąd: ${error}`);
-            }
-        }
-    }
-}
+                        // AGRESYWNE CZYSZCZENIE:
+                        // 1. Odetnij wszystko od pierwszego nawiasu ( lub [
+                        // ZMIANA: Usunięto zbędne escape'y
+                        namePart = namePart.split(/[([\]]/)[0].trim();
+                        
+                        // 2. Odetnij wszystko od znacznika foil *F*
+                        namePart = namePart.split(/\s+\*?[FNG]+\*?/i)[0].trim();
+
+                        // 3. Odetnij numer kolekcjonerski, jeśli jest na końcu
+                        namePart = namePart.replace(/\s+\d+[a-z]?\s*$/i, '').trim(); 
+                        
+                        if (namePart) {
+                            try {
+                                data = await getCardByName(`!"${namePart}"`); 
+                            // ZMIANA: Usunięto nieużywaną zmienną 'e'
+                            } catch (error) { 
+                                // Tu zostawiamy 'error', bo go używamy w konsoli
+                                console.error(`[Import] Ostateczny fallback nie powiódł się dla: "${line}" (Oczyszczona nazwa: "${namePart}"). Błąd: ${error}`);
+                            }
+                        }
+                    }
+                }
+                
+                // --- Koniec logiki parsowania ---
 
                 if (!data) {
                     console.error(`Ostatecznie nie udało się pobrać danych dla linii: ${line}`);
                     continue; 
                 }
 
-
-                // LOGIKA DODAWANIA KARTY
+                // LOGIKA DODAWANIA KARTY (pozostaje bez zmian)
                 const tokens = await getTokensData(data);
                 const card: CardType = mapScryfallDataToCardType(data, tokens);
 
@@ -676,37 +681,23 @@ if (!data) {
                     });
                 }
 
-// ZMIANA: Sprawdzanie i dodawanie commandera do listy (tylko w głównej talii)
+                // Logika Commandera (pozostaje bez zmian)
                 if (!isSideboardSection && card.type_line?.includes("Legendary Creature")) {
-                    const commanderBaseId = card.id; // To jest ID Scryfall karty
-
-                    // 💡 Zmieniony WARUNEK: Sprawdzamy, czy commander został już ustawiony
+                    const commanderBaseId = card.id; 
                     if (!isCommanderAlreadySet) {
-                        // Dodajemy pierwszą znalezioną kartę jako commandera
-                        
-                        // Musimy użyć unikalnego ID dla instancji commandera (aby powiązać ją z kopią w Decku)
                         const newCommanderInstance: CardType = { 
                             ...card, 
                             id: `${commanderBaseId}-${Date.now()}-commander` 
                         };
-
                         newCommanders.push(newCommanderInstance);
-                        
-                        // 💡 WAŻNE: Ustawiamy flagę na true po dodaniu pierwszego
                         isCommanderAlreadySet = true;
-                        
-                        // Zapisujemy ID Scryfall, aby móc użyć tej samej instancji w talii
                         commanderBaseIdsInBulk.add(card.id); 
                     }
                 }
 
-                // Dodawanie kart do odpowiedniej listy z odpowiednią ilością kopii
+                // Dodawanie kopii kart (pozostaje bez zmian)
                 for (let i = 0; i < count; i++) {
-                    
-                    // Sprawdzamy, czy aktualnie dodawana karta jest instancją commandera, która została już utworzona
                     const commanderInstance = newCommanders.find(c => c.id.startsWith(card.id));
-                    
-                    // Logika: Jeśli to jest pierwsza kopia i jest commanderem, użyj instancji commandera (o specjalnym ID)
                     const isCommanderCopy = (i === 0 && !isSideboardSection && !!commanderInstance);
                     
                     const uniqueCard: CardType = isCommanderCopy
@@ -721,23 +712,22 @@ if (!data) {
                 }
             }
             
-            // Zakończenie importu
+            // Zakończenie importu (pozostaje bez zmian)
             updateTokenList(bulkTokens);
-
             setDeck(newDeck);
             setSideboard(newSideboard); 
-            // ZMIANA: Ustawienie tablicy commanderów
             setCommander(newCommanders); 
-
             setBulkText(""); 
+
         } catch (error) {
+             // Tu zostawiamy 'error', bo go używamy w alercie
             alert(`Błąd krytyczny podczas importu talii. (Błąd: ${error instanceof Error ? error.message : "Nieznany błąd"})`);
             console.error(error);
         } finally {
             setLoading(false);
         }
     }
-//------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------
 
     const handleClearStorage = () => {
         if (window.confirm("Czy na pewno chcesz usunąć całą talię (w tym commandera, tokeny) ORAZ cały cache wyszukiwania kart Scryfall z pamięci lokalnej?")) {
@@ -760,13 +750,14 @@ if (!data) {
             localStorage.removeItem("currentDeck");
             localStorage.removeItem("currentSideboard"); 
             localStorage.removeItem("commander");
-            localStorage.removeItem("dynamicTokens"); // Zmiana z "tokenList" na "dynamicTokens"
+            localStorage.removeItem("tokenList"); // ✅ ZMIANA: Usuwamy "tokenList"
 
             // 3. Resetowanie stanów komponentu
             setDeck([]);
             setSideboard([]); 
             setCommander([]); // ZMIANA: Reset na pustą tablicę
-            setDynamicTokens([])
+            // ✅ ZMIANA: Resetujemy tokenList do samych statycznych
+            setTokenList(STATIC_TOKENS.map(mapCardToToken)); 
             setBulkText("");
             setQuery("");
             alert("Talia, Sideboard i cache kart zostały usunięte z pamięci lokalnej.");
@@ -779,7 +770,7 @@ if (!data) {
         deck,
         sideboard,
         commander,
-        tokenList,
+        tokenList, // ✅ Zwracamy poprawny, pojedynczy stan "tokenList"
         query,
         bulkText,
         loading,

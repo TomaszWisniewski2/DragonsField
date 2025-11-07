@@ -8,8 +8,9 @@ function sleep(ms: number) { return new Promise(res => setTimeout(res, ms)); }
 /**
  * Pobiera dane karty po nazwie (z rozmyciem) lub z pamięci podręcznej.
  */
-export async function getCardByName(name: string) {
-  const key = `scry_name_${name.toLowerCase()}`;
+export async function getCardByName(query: string) {
+  // Klucz cache'u zależy teraz od całego zapytania
+  const key = `scry_query_${query.toLowerCase()}`;
   const cached = localStorage.getItem(key);
   if (cached) return JSON.parse(cached);
 
@@ -17,11 +18,25 @@ export async function getCardByName(name: string) {
   const delta = now - lastRequest;
   if (delta < MIN_GAP) await sleep(MIN_GAP - delta);
 
-  const res = await fetch(`${BASE}/cards/named?fuzzy=${encodeURIComponent(name)}`);
+  // 💡 NOWA LOGIKA: Sprawdzamy, czy to zapytanie "exact"
+  // np. !"Sol Ring" lub !"Sol Ring" set:cmr
+  const isExact = query.startsWith('!');
+  
+  let endpoint = 'fuzzy';
+  let finalQuery = query;
+
+  if (isExact) {
+    endpoint = 'exact';
+    // Usuwamy '!' z zapytania, Scryfall oczekuje czystej nazwy/query
+    finalQuery = query.substring(1); 
+  }
+
+  const res = await fetch(`${BASE}/cards/named?${endpoint}=${encodeURIComponent(finalQuery)}`);
   lastRequest = Date.now();
-  if (!res.ok) throw new Error(`Scryfall: ${res.status}`);
+  
+  if (!res.ok) throw new Error(`Scryfall (${endpoint}): ${res.status} dla zapytania [${finalQuery}]`);
+  
   const data = await res.json();
-  // store compact version
   localStorage.setItem(key, JSON.stringify(data));
   return data;
 }

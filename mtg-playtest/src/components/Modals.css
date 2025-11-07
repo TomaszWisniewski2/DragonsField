@@ -1,0 +1,109 @@
+/* === src/components/Modals.css === */
+
+/* Tło dla wszystkich okien modalnych */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(30, 30, 30, 0.85); /* Ciemniejsze tło z większą przezroczystością */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  backdrop-filter: blur(3px); /* Lepszy efekt rozmycia tła */
+}
+
+/* Generyczna zawartość okna modalnego */
+.modal-content {
+  background-color: #2b2b2b; /* Ciemnoszary, spójny z motywem */
+  color: white;
+  padding: 24px;
+  border-radius: 10px;
+  text-align: center;
+  position: relative;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+  min-width: 320px;
+  max-width: 450px;
+  border: 1px solid #555; /* Delikatna ramka */
+}
+
+/* Nagłówek (np. <h2>) */
+.modal-content h2 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 1.6rem;
+  color: #fff;
+}
+
+/* Główny tekst (np. <p>) */
+.modal-content p {
+  font-size: 1.1rem;
+  margin: 15px 0;
+  line-height: 1.4;
+}
+
+/* Wytłuszczony tekst (np. <strong>) */
+.modal-content strong {
+  color: #ffcc66; /* Złoty akcent dla ważnych informacji */
+  font-weight: 600;
+}
+
+/* Dodatkowy tekst z detalami (zastępuje styl inline) */
+.modal-details {
+  font-size: 0.9rem;
+  color: #aaa;
+  margin-top: 20px;
+  line-height: 1.3;
+}
+
+/* Kontener na przyciski */
+.modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 15px; /* Mniejszy, bardziej standardowy odstęp */
+  margin-top: 25px;
+}
+
+/* Generyczny przycisk modalny */
+.modal-button {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1em;
+  font-weight: bold;
+  transition: all 0.2s ease;
+  min-width: 100px;
+}
+
+/* --- Warianty przycisków --- */
+
+/* Przycisk GŁÓWNY (zielony, np. 'Tak', 'Potwierdź') */
+.modal-button.primary {
+  background-color: #4CAF50; 
+  color: white;
+}
+.modal-button.primary:hover {
+  background-color: #45a049;
+}
+
+/* Przycisk DRUGORZĘDNY (szary, np. 'Anuluj', 'Nie') */
+.modal-button.secondary {
+  background-color: #555;
+  color: white;
+  border: 1px solid #777;
+}
+.modal-button.secondary:hover {
+  background-color: #666;
+}
+
+/* Przycisk NIEBEZPIECZNY (czerwony, np. 'Resetuj', 'Usuń') */
+.modal-button.danger {
+  background-color: #f44336; 
+  color: white;
+}
+.modal-button.danger:hover {
+  background-color: #d32f2f;
+}

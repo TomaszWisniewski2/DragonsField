@@ -64,6 +64,7 @@ export interface CardOnField {
 export interface Player {
   id: string;
   name: string;
+  isOnline: boolean;
   life: number;
   initialDeck: CardType[];
   library: CardType[];
