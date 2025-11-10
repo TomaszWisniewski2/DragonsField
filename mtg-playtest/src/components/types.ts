@@ -89,7 +89,6 @@ export interface Player {
 export interface Session {
   code: string;
   players: Player[];
-  spectators: Spectator[];
   turn: number;
   activePlayer: string;
   sessionType: SessionType;
@@ -98,8 +97,4 @@ export interface Session {
 export interface PanelProps {
   onClose: () => void;
   panelRef: React.RefObject<HTMLDivElement | null>;
-}
-export interface Spectator {
-  id: string; // Socket.id
-  name: string;
 }

@@ -368,6 +368,16 @@ export default function Battlefield({
 
 
 
+
+
+
+
+
+
+
+
+
+
 // --- OBSŁUGA DRAG & DROP ---
 
   // ✅ CAŁA TA FUNKCJA (wraz z wewnętrzną 'findCardZoneInPlayer') ZOSTAŁA ZASTĄPIONA
