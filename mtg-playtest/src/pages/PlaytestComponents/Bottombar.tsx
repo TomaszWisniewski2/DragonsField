@@ -387,11 +387,7 @@ export default function Bottombar({
 
         {/* Obszar RĘKI (Hand) - zostaje w Bottombar, bo jest szerszy i ma unikalny układ */}
        
-       
-       
-       
-       
-<div
+        <div
           className="hand fixed-hand-width"
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => handleDrop(e, "hand")}
@@ -411,7 +407,7 @@ export default function Bottombar({
           </span>
           {/* Koniec zmian */}
           
-<div className="hand-cards">
+          <div className="hand-cards">
             {/* ✅ ZMIANA: Dodajemy renderowanie warunkowe */}
             {player?.hand.length === 0 ? (
               // Jeśli ręka jest pusta, pokaż placeholder
