@@ -566,16 +566,22 @@ export function useDeckManager(): DeckManagerHook {
 /**
      * ZMODYFIKOWANA OBSŁUGA MASOWEGO IMPORTU (Z POPRAWKAMI LINTERA)
      */
-    async function handleBulkImport() {
-        // 1. Regex precyzyjny (Set + Numer): 1 Sol Ring (CMR) 334
-        const preciseCardLineRegex = /^(\d+)\s+(.+?)\s+\(([A-Z0-9]+)\)\s+([A-Z0-9\-\\/]+)$/;
-        
-        // 2. Regex Nazwa + Set: 1 Sol Ring (CMR)
-        // Musi mieć $ na końcu, aby nie łapać linii z numerem
-        const nameAndSetRegex = /^(\d+)\s+(.+?)\s+\(([A-Z0-9]+)\)$/;
+async function handleBulkImport() {
+        // --- NOWA, BARDZIEJ ODPORNA LOGIKA PARSOWANIA ---
 
-        // 3. Regex podstawowy (łapie wszystko inne): 1 Sol Ring LUB 1 Sol Ring *F*
-        const bareNameLineRegex = /^(\d+)\s+(.+)$/;
+        // 1. Regex dla pełnego formatu: 1 Nazwa (SET) Numer
+        //    Grupy: 1:Ilość, 2:Nazwa, 3:Set, 4:Numer
+        const fullRegex = /^(\d+)\s+(.+?)\s+\(([A-Z0-9]+)\)\s+([\w\-\\/]+)$/i;
+        
+        // 2. Regex dla formatu: 1 Nazwa (SET)
+        //    Grupy: 1:Ilość, 2:Nazwa, 3:Set
+        const nameSetRegex = /^(\d+)\s+(.+?)\s+\(([A-Z0-9]+)\)$/i;
+
+        // 3. Regex dla formatu: 1 Nazwa (Fallback)
+        //    Grupy: 1:Ilość, 2:Nazwa
+        const bareNameRegex = /^(\d+)\s+(.+)$/;
+
+        // --- Koniec definicji Regex ---
 
         const lines = bulkText.split("\n").map((l) => l.trim()).filter(Boolean);
         const newDeck: CardType[] = [];
@@ -583,11 +589,92 @@ export function useDeckManager(): DeckManagerHook {
         const bulkTokens: TokenData[] = [];
         const newCommanders: CardType[] = []; 
         const uniqueTokenNamesInBulk = new Set<string>();
-        const commanderBaseIdsInBulk = new Set<string>();
-        let isCommanderAlreadySet = false;
+
+        // --- 🚨 POPRAWIONE DEFINICJE ZMIENNYCH 🚨 ---
+        const commanderBaseIdsInBulk = new Set<string>(); // <-- Tego brakowało
+        let isCommanderAlreadySet = false; // <-- Tego brakowało
         let isSideboardSection = false;
+        // --- ---------------------------------- ---
 
         setLoading(true);
+        
+        // Funkcja pomocnicza do pobierania danych dla pojedynczej linii
+        async function fetchCardData(line: string): Promise<{ data: ScryfallCardData | null, count: number }> {
+            
+            // --- Krok 1: Spróbuj dopasować pełny format (Set + Numer) ---
+            const fullMatch = line.match(fullRegex);
+            if (fullMatch) {
+                const count = parseInt(fullMatch[1], 10);
+                const name = fullMatch[2]; // Mamy dokładną nazwę!
+                const setCode = fullMatch[3];
+                const collectorNumber = fullMatch[4];
+
+                // 💡 Specjalna obsługa PLIST: API Scryfall nie lubi /cards/PLIST/xxx
+                if (setCode.toUpperCase() !== 'PLIST') {
+                    try {
+                        // To zadziała dla "Jetmir's Garden (PSNC) 250p"
+                        const data = await getCardBySetAndNumber(setCode, collectorNumber);
+                        return { data, count };
+                    } catch { // <-- POPRAWKA LINTERA
+                        console.warn(`[Import] Nie udało się pobrać (Set/Numer): "${line}". Próba fallbacku na dokładną nazwę.`);
+                        // Błąd -> przechodzimy do fallbacku poniżej (używając dokładnej nazwy)
+                    }
+                }
+
+                // Fallback dla PLIST lub jeśli Set/Numer zawiódł, ale mamy DOKŁADNĄ nazwę
+                try {
+                    console.log(`[Import] Używam fallbacku na nazwę dla (PLIST lub błąd Set/Numer): "${name}"`);
+                    // To zadziała dla "Maelstrom Nexus (PLIST) 218"
+                    const data = await getCardByName(`!"${name}"`);
+                    return { data, count };
+                } catch (error) {
+                    console.error(`[Import] Fallback na nazwę z fullRegex nie powiódł się dla: "${line}". Błąd: ${error}`);
+                    return { data: null, count: 0 };
+                }
+            }
+
+            // --- Krok 2: Spróbuj dopasować format (Nazwa + Set) ---
+            const nameSetMatch = line.match(nameSetRegex);
+            if (nameSetMatch) {
+                const count = parseInt(nameSetMatch[1], 10);
+                const name = nameSetMatch[2];
+                const setCode = nameSetMatch[3];
+                try {
+                    const data = await getCardByName(`!"${name}" set:${setCode}`);
+                    return { data, count };
+                } catch { // <-- POPRAWKA LINTERA
+                    console.warn(`[Import] Nie udało się pobrać (Nazwa/Set): "${line}". Próba fallbacku na samą nazwę.`);
+                    // Przechodzimy do Kroku 3
+                }
+            }
+
+            // --- Krok 3: Ostateczny fallback (Tylko Nazwa) ---
+            const bareMatch = line.match(bareNameRegex);
+            if (bareMatch) {
+                const count = parseInt(bareMatch[1], 10);
+                let namePart = bareMatch[2].trim(); // np. "Jakaś karta (SET) 123"
+
+                // AGRESYWNE CZYSZCZENIE (to jest logika, którą wklejałeś i jest poprawna)
+                namePart = namePart.split(/[([\]]/)[0].trim();
+                namePart = namePart.split(/\s+\*?[FNG]+\*?/i)[0].trim();
+                namePart = namePart.replace(/\s+\d+[a-z]?\s*$/i, '').trim(); 
+                
+                if (namePart) {
+                    try {
+                        const data = await getCardByName(`!"${namePart}"`); 
+                        return { data, count };
+                 } catch (error) { 
+                        console.error(`[Import] Ostateczny fallback nie powiódł się dla: "${line}" (Oczyszczona nazwa: "${namePart}"). Błąd: ${error}`);
+                        return { data: null, count: 0 };
+                    }
+                }
+            }
+
+            console.error(`[Import] Linia "${line}" nie pasuje do żadnego formatu.`);
+            return { data: null, count: 0 };
+        }
+
+        // --- Główna pętla importu ---
         try {
             for (const line of lines) {
                 if (line.toUpperCase() === "SIDEBOARD:") {
@@ -595,83 +682,17 @@ export function useDeckManager(): DeckManagerHook {
                     continue;
                 }
                 
-                const countMatch = line.match(/^(\d+)/);
-                if (!countMatch) continue;
-                const count = parseInt(countMatch[1], 10);
+                const { data, count } = await fetchCardData(line);
 
-                let data: ScryfallCardData | null = null;
-                
-                // --- NOWA, UPROSZCZONA LOGIKA PARSOWANIA ---
-
-                // Krok 1: Próba dopasowania precyzyjnego (Set + Numer)
-                const preciseMatch = line.match(preciseCardLineRegex);
-                if (preciseMatch) {
-                    try {
-                        const setCode = preciseMatch[3];
-                        const collectorNumber = preciseMatch[4];
-                        data = await getCardBySetAndNumber(setCode, collectorNumber);
-                    // ZMIANA: Usunięto nieużywaną zmienną 'e'
-                    } catch { 
-                        console.warn(`[Import] Nie udało się pobrać (Set/Numer): "${line}". Próba fallbacku.`);
-                    }
-                }
-
-                // Krok 2: Próba dopasowania (Nazwa + Set)
-                if (!data) {
-                    const nameSetMatch = line.match(nameAndSetRegex);
-                    if (nameSetMatch) {
-                        try {
-                            const name = nameSetMatch[2];
-                            const setCode = nameSetMatch[3];
-                            data = await getCardByName(`!"${name}" set:${setCode}`);
-                        // ZMIANA: Usunięto nieużywaną zmienną 'e'
-                        } catch {
-                            console.warn(`[Import] Nie udało się pobrać (Nazwa/Set): "${line}". Próba fallbacku.`);
-                        }
-                    }
-                }
-
-                // Krok 3: Ostateczny fallback (Tylko Nazwa - oczyszczona)
-                if (!data) {
-                    const bareMatch = line.match(bareNameLineRegex);
-                    if (bareMatch) {
-                        let namePart = bareMatch[2].trim();
-
-                        // AGRESYWNE CZYSZCZENIE:
-                        // 1. Odetnij wszystko od pierwszego nawiasu ( lub [
-                        // ZMIANA: Usunięto zbędne escape'y
-                        namePart = namePart.split(/[([\]]/)[0].trim();
-                        
-                        // 2. Odetnij wszystko od znacznika foil *F*
-                        namePart = namePart.split(/\s+\*?[FNG]+\*?/i)[0].trim();
-
-                        // 3. Odetnij numer kolekcjonerski, jeśli jest na końcu
-                        namePart = namePart.replace(/\s+\d+[a-z]?\s*$/i, '').trim(); 
-                        
-                        if (namePart) {
-                            try {
-                                data = await getCardByName(`!"${namePart}"`); 
-                            // ZMIANA: Usunięto nieużywaną zmienną 'e'
-                            } catch (error) { 
-                                // Tu zostawiamy 'error', bo go używamy w konsoli
-                                console.error(`[Import] Ostateczny fallback nie powiódł się dla: "${line}" (Oczyszczona nazwa: "${namePart}"). Błąd: ${error}`);
-                            }
-                        }
-                    }
-                }
-                
-                // --- Koniec logiki parsowania ---
-
-                if (!data) {
+                if (!data || count === 0) {
                     console.error(`Ostatecznie nie udało się pobrać danych dla linii: ${line}`);
                     continue; 
                 }
 
-                // LOGIKA DODAWANIA KARTY (pozostaje bez zmian)
+                // --- Logika dodawania karty (teraz powinna działać) ---
                 const tokens = await getTokensData(data);
                 const card: CardType = mapScryfallDataToCardType(data, tokens);
 
-                // Zbieranie unikalnych tokenów
                 if (tokens) {
                     tokens.forEach(token => {
                         if (!uniqueTokenNamesInBulk.has(token.name)) {
@@ -681,21 +702,16 @@ export function useDeckManager(): DeckManagerHook {
                     });
                 }
 
-                // Logika Commandera (pozostaje bez zmian)
                 if (!isSideboardSection && card.type_line?.includes("Legendary Creature")) {
                     const commanderBaseId = card.id; 
-                    if (!isCommanderAlreadySet) {
-                        const newCommanderInstance: CardType = { 
-                            ...card, 
-                            id: `${commanderBaseId}-${Date.now()}-commander` 
-                        };
+                    if (!isCommanderAlreadySet) { // <-- Teraz ta zmienna istnieje
+                        const newCommanderInstance: CardType = { ...card, id: `${commanderBaseId}-${Date.now()}-commander` };
                         newCommanders.push(newCommanderInstance);
-                        isCommanderAlreadySet = true;
-                        commanderBaseIdsInBulk.add(card.id); 
+                        isCommanderAlreadySet = true; // <-- Teraz ta zmienna istnieje
+                        commanderBaseIdsInBulk.add(card.id); // <-- Teraz ta zmienna istnieje
                     }
                 }
 
-                // Dodawanie kopii kart (pozostaje bez zmian)
                 for (let i = 0; i < count; i++) {
                     const commanderInstance = newCommanders.find(c => c.id.startsWith(card.id));
                     const isCommanderCopy = (i === 0 && !isSideboardSection && !!commanderInstance);
@@ -712,15 +728,14 @@ export function useDeckManager(): DeckManagerHook {
                 }
             }
             
-            // Zakończenie importu (pozostaje bez zmian)
+            // Zakończenie importu (bez zmian)
             updateTokenList(bulkTokens);
             setDeck(newDeck);
-            setSideboard(newSideboard); 
+           setSideboard(newSideboard); 
             setCommander(newCommanders); 
             setBulkText(""); 
 
         } catch (error) {
-             // Tu zostawiamy 'error', bo go używamy w alercie
             alert(`Błąd krytyczny podczas importu talii. (Błąd: ${error instanceof Error ? error.message : "Nieznany błąd"})`);
             console.error(error);
         } finally {

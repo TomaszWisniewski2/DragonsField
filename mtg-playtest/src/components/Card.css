@@ -1,13 +1,15 @@
 /* Definiujemy stałą bazową szerokość karty */
 :root {
     --card-base-width: 100px;
+    --card-base-height: 139.3px;
 }
 
 .card-container {
     position: relative;
     /* Usuwamy width: 100px; i zastępujemy go zmienną */
     width: var(--card-base-width);
-    height: calc(var(--card-base-width) * 1.4);
+    height: var(--card-base-height);
+    /* calc(var(--card-base-width) * 1.4); */
      /* Typowa proporcja MTG */
     
     text-align: center;
